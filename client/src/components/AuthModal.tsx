@@ -138,14 +138,14 @@ export function AuthModal({
                   <label className="text-xs font-medium text-ink block mb-1">
                     Full name
                   </label>
-                  <div className="relative">
+                  <div className="auth-input-group">
                     <User
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                      size={17}
+                      className="auth-input-icon"
                     />
                     <input
                       type="text"
-                      className="auth-input pl-9"
+                      className="auth-input"
                       placeholder="e.g. Bilal Khan"
                       value={fullName}
                       onChange={e => setFullName(e.target.value)}
@@ -159,14 +159,14 @@ export function AuthModal({
                 <label className="text-xs font-medium text-ink block mb-1">
                   Email address
                 </label>
-                <div className="relative">
+                <div className="auth-input-group">
                   <Mail
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                    size={17}
+                    className="auth-input-icon"
                   />
                   <input
                     type="email"
-                    className="auth-input pl-9"
+                    className="auth-input"
                     placeholder="name@example.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -180,14 +180,14 @@ export function AuthModal({
                   <label className="text-xs font-medium text-ink block mb-1">
                     Mobile number (Optional)
                   </label>
-                  <div className="relative">
+                  <div className="auth-input-group">
                     <Phone
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                      size={17}
+                      className="auth-input-icon"
                     />
                     <input
                       type="tel"
-                      className="auth-input pl-9"
+                      className="auth-input"
                       placeholder="03XXXXXXXXX"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
@@ -200,14 +200,14 @@ export function AuthModal({
                 <label className="text-xs font-medium text-ink block mb-1">
                   Password
                 </label>
-                <div className="relative">
+                <div className="auth-input-group">
                   <Lock
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                    size={17}
+                    className="auth-input-icon"
                   />
                   <input
                     type="password"
-                    className="auth-input pl-9"
+                    className="auth-input"
                     placeholder={
                       mode === "register"
                         ? "At least 6 characters"

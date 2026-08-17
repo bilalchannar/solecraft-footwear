@@ -2510,17 +2510,36 @@ textarea:focus-visible {
   color: var(--ink);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
+.auth-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.auth-input-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 2;
+}
 .auth-input {
   width: 100%;
-  height: 42px;
-  padding: 8px 12px;
+  height: 44px;
+  padding: 8px 14px 8px 40px !important;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   color: var(--ink);
   outline: none;
   transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.auth-input::placeholder {
+  color: var(--muted);
+  opacity: 0.75;
 }
 .auth-input:focus {
   border-color: var(--moss);
