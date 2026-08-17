@@ -226,25 +226,47 @@ textarea:focus-visible {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   font-family: "Fraunces", Georgia, serif;
   font-weight: 600;
-  letter-spacing: -0.055em;
-  font-size: 27px;
+  letter-spacing: -0.02em;
+  font-size: 26px;
+  line-height: 1;
+  text-decoration: none;
+  color: var(--ink);
+  flex-shrink: 0;
 }
 .brand__mark {
+  position: relative;
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.brand__diamond {
+  width: 17px;
+  height: 17px;
   border: 2px solid var(--moss);
   transform: rotate(45deg);
-  display: inline-grid;
+  display: grid;
   place-items: center;
+  flex-shrink: 0;
+  transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.brand__mark::after {
+.brand__diamond::after {
   content: "";
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   background: var(--clay);
+  border-radius: 1px;
+}
+.brand:hover .brand__diamond {
+  transform: rotate(135deg) scale(1.08);
+}
+.brand__text {
+  display: inline-block;
 }
 .desktop-nav,
 .header-actions {

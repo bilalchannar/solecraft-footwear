@@ -158,12 +158,10 @@ export function StorefrontLayout({
             <NavLinks />
           </nav>
           <Link className="brand" href="/" aria-label="SoleCraft home">
-            <motion.span
-              whileHover={{ rotate: 90, scale: 1.1 }}
-              transition={microSpring}
-              className="brand__mark"
-            />
-            <span>SoleCraft</span>
+            <span className="brand__mark">
+              <span className="brand__diamond" />
+            </span>
+            <span className="brand__text">SoleCraft</span>
           </Link>
           <div className="header-actions">
             <motion.button
@@ -468,8 +466,10 @@ export function StorefrontLayout({
           <div className="footer-grid">
             <div>
               <Link className="brand" href="/">
-                <span className="brand__mark" />
-                <span>SoleCraft</span>
+                <span className="brand__mark">
+                  <span className="brand__diamond" />
+                </span>
+                <span className="brand__text">SoleCraft</span>
               </Link>
               <p>
                 Considered footwear for Pakistan’s everyday rituals,

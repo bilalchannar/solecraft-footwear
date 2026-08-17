@@ -84,9 +84,11 @@ export function AuthModal({
             className="auth-modal-card"
           >
             <div className="auth-modal-head flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="brand__mark" />
-                <span className="font-medium text-ink">SoleCraft Account</span>
+              <div className="flex items-center gap-3">
+                <span className="brand__mark">
+                  <span className="brand__diamond" />
+                </span>
+                <span className="font-semibold text-ink">SoleCraft Account</span>
               </div>
               <button
                 className="icon-button"
