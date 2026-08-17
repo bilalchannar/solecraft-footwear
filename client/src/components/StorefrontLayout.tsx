@@ -16,6 +16,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Seo } from "@/components/Seo";
+import { AuthModal } from "@/components/AuthModal";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import { luxuryEase, microSpring, slideUpVariants } from "@/lib/motion";
@@ -69,6 +70,7 @@ export function StorefrontLayout({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>(() =>
@@ -213,7 +215,7 @@ export function StorefrontLayout({
                 onClick={event => {
                   if (!isAuthenticated) {
                     event.preventDefault();
-                    startLogin();
+                    setAuthModalOpen(true);
                   }
                 }}
                 aria-label="Account"
@@ -288,13 +290,16 @@ export function StorefrontLayout({
               </div>
               <NavLinks onNavigate={() => setMenuOpen(false)} />
               <Link
-                href={isAuthenticated ? "/account" : "/"}
-                onClick={() => {
+                href={isAuthenticated ? "/account" : "/account"}
+                onClick={(e) => {
                   setMenuOpen(false);
-                  if (!isAuthenticated) startLogin();
+                  if (!isAuthenticated) {
+                    e.preventDefault();
+                    setAuthModalOpen(true);
+                  }
                 }}
               >
-                Account
+                {isAuthenticated ? "My Account" : "Sign In / Register"}
               </Link>
               <button className="mobile-theme-control" onClick={toggleTheme}>
                 {themeMode === "system" ? (
@@ -451,6 +456,10 @@ export function StorefrontLayout({
           </div>
         )}
       </AnimatePresence>
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+      />
       <main key={location} className="page-content">
         {children}
       </main>

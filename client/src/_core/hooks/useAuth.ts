@@ -90,9 +90,27 @@ export function useAuth(options?: UseAuthOptions) {
     state.user,
   ]);
 
+  const registerMutation = trpc.auth.register.useMutation({
+    onSuccess: (res) => {
+      utils.auth.me.setData(undefined, res.user);
+      utils.auth.me.invalidate();
+    },
+  });
+
+  const loginMutation = trpc.auth.login.useMutation({
+    onSuccess: (res) => {
+      utils.auth.me.setData(undefined, res.user);
+      utils.auth.me.invalidate();
+    },
+  });
+
   return {
     ...state,
     refresh: () => meQuery.refetch(),
     logout,
+    register: registerMutation.mutateAsync,
+    login: loginMutation.mutateAsync,
+    isRegistering: registerMutation.isPending,
+    isLoggingIn: loginMutation.isPending,
   };
 }

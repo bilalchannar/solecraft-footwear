@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
 import {
   adminProcedure,
@@ -65,6 +66,8 @@ import {
   updateProductCore,
   updateReviewStatus,
   updateInventory,
+  registerUserAccount,
+  loginUserWithPassword,
 } from "./db";
 
 const phone = z
@@ -90,6 +93,48 @@ export const appRouter = router({
   integrations: publicProcedure.query(() => getProviderStatus()),
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    register: publicProcedure
+      .input(
+        z.object({
+          fullName: z.string().trim().min(2, "Name must be at least 2 characters."),
+          email: z.string().trim().email("Please provide a valid email address."),
+          password: z.string().min(6, "Password must be at least 6 characters."),
+          phone: phone.optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const user = await registerUserAccount(input);
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.name || "",
+          expiresInMs: ONE_YEAR_MS,
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, {
+          ...cookieOptions,
+          maxAge: ONE_YEAR_MS,
+        });
+        return { success: true, user };
+      }),
+    login: publicProcedure
+      .input(
+        z.object({
+          email: z.string().trim().email("Please provide a valid email address."),
+          password: z.string().min(1, "Password is required."),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const user = await loginUserWithPassword(input);
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.name || "",
+          expiresInMs: ONE_YEAR_MS,
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, {
+          ...cookieOptions,
+          maxAge: ONE_YEAR_MS,
+        });
+        return { success: true, user };
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

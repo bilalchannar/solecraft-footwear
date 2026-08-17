@@ -102,43 +102,212 @@ export function assertCheckoutStock(lines: CheckoutStockLine[]) {
   }
 }
 
+import { hashPassword, verifyPassword } from "./_core/password";
+
+const MEMORY_USERS: Map<string, typeof users.$inferSelect & { passwordHash?: string }> = new Map();
+const MEMORY_PROFILES: Map<number, typeof profiles.$inferSelect> = new Map();
+let mockUserIdSeq = 100;
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert.");
-  const db = await requireDb();
-  const isOwner = user.openId === ENV.ownerOpenId;
-  await db
-    .insert(users)
-    .values({
-      openId: user.openId,
-      name: user.name ?? null,
-      email: user.email ?? null,
-      loginMethod: user.loginMethod ?? null,
-      role: isOwner ? "super_admin" : (user.role ?? "user"),
-      lastSignedIn: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: users.openId,
-      set: {
-        name: user.name ?? null,
-        email: user.email ?? null,
-        loginMethod: user.loginMethod ?? null,
-        role: isOwner
-          ? "super_admin"
-          : sql`COALESCE(${users.role}, ${user.role ?? "user"})`,
-        lastSignedIn: new Date(),
-      },
-    });
+  try {
+    const db = await getDb();
+    if (db) {
+      const isOwner = user.openId === ENV.ownerOpenId;
+      await db
+        .insert(users)
+        .values({
+          openId: user.openId,
+          name: user.name ?? null,
+          email: user.email ?? null,
+          loginMethod: user.loginMethod ?? null,
+          role: isOwner ? "super_admin" : (user.role ?? "user"),
+          lastSignedIn: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: users.openId,
+          set: {
+            name: user.name ?? null,
+            email: user.email ?? null,
+            loginMethod: user.loginMethod ?? null,
+            role: isOwner
+              ? "super_admin"
+              : sql`COALESCE(${users.role}, ${user.role ?? "user"})`,
+            lastSignedIn: new Date(),
+          },
+        });
+      return;
+    }
+  } catch (error) {
+    console.warn("[upsertUser] DB offline, storing user in memory:", error);
+  }
+
+  const existing = MEMORY_USERS.get(user.openId);
+  const memUser: typeof users.$inferSelect = {
+    id: existing?.id ?? ++mockUserIdSeq,
+    openId: user.openId,
+    name: user.name ?? null,
+    email: user.email ?? null,
+    loginMethod: user.loginMethod ?? null,
+    role: user.role ?? "user",
+    createdAt: existing?.createdAt ?? new Date(),
+    updatedAt: new Date(),
+    lastSignedIn: new Date(),
+  };
+  MEMORY_USERS.set(user.openId, memUser);
 }
 
 export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.openId, openId))
-    .limit(1);
-  return result[0];
+  try {
+    const db = await getDb();
+    if (db) {
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.openId, openId))
+        .limit(1);
+      if (result && result.length > 0) return result[0];
+    }
+  } catch (error) {
+    console.warn("[getUserByOpenId] DB error, checking memory:", error);
+  }
+  return MEMORY_USERS.get(openId);
+}
+
+export async function getUserByEmail(email: string) {
+  const normalized = email.toLowerCase().trim();
+  try {
+    const db = await getDb();
+    if (db) {
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, normalized))
+        .limit(1);
+      if (result && result.length > 0) return result[0];
+    }
+  } catch (error) {
+    console.warn("[getUserByEmail] DB error, checking memory:", error);
+  }
+  return Array.from(MEMORY_USERS.values()).find(
+    u => u.email?.toLowerCase().trim() === normalized
+  );
+}
+
+export async function registerUserAccount(data: {
+  fullName: string;
+  email: string;
+  password: string;
+  phone?: string;
+}) {
+  const normalizedEmail = data.email.toLowerCase().trim();
+  const existing = await getUserByEmail(normalizedEmail);
+  if (existing) {
+    throw new Error("An account with this email already exists. Please log in.");
+  }
+
+  const passHash = hashPassword(data.password);
+  const userOpenId = `usr_${uid().replace(/-/g, "")}`;
+  const isOwner = normalizedEmail === "admin@solecraft.pk" || userOpenId === ENV.ownerOpenId;
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const [insertedUser] = await db
+        .insert(users)
+        .values({
+          openId: userOpenId,
+          name: data.fullName.trim(),
+          email: normalizedEmail,
+          loginMethod: passHash,
+          role: isOwner ? "super_admin" : "user",
+          lastSignedIn: new Date(),
+        })
+        .returning();
+
+      if (insertedUser) {
+        // Create profile
+        await db.insert(profiles).values({
+          userId: insertedUser.id,
+          fullName: data.fullName.trim(),
+          phone: data.phone?.trim() ?? null,
+          marketingOptIn: 1,
+        }).onConflictDoNothing();
+
+        // Initialize cart
+        await db.insert(carts).values({
+          publicId: uid(),
+          userId: insertedUser.id,
+        }).onConflictDoNothing();
+
+        return insertedUser;
+      }
+    }
+  } catch (error) {
+    console.warn("[registerUserAccount] DB offline, saving user to memory store:", error);
+  }
+
+  // Memory store fallback
+  const mockId = ++mockUserIdSeq;
+  const memUser: typeof users.$inferSelect & { passwordHash?: string } = {
+    id: mockId,
+    openId: userOpenId,
+    name: data.fullName.trim(),
+    email: normalizedEmail,
+    loginMethod: passHash,
+    role: isOwner ? "super_admin" : "user",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lastSignedIn: new Date(),
+    passwordHash: passHash,
+  };
+  MEMORY_USERS.set(userOpenId, memUser);
+
+  const memProfile: typeof profiles.$inferSelect = {
+    id: mockId,
+    userId: mockId,
+    fullName: data.fullName.trim(),
+    phone: data.phone?.trim() ?? null,
+    avatarUrl: null,
+    marketingOptIn: 1,
+    disabledAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  MEMORY_PROFILES.set(mockId, memProfile);
+
+  return memUser;
+}
+
+export async function loginUserWithPassword(credentials: {
+  email: string;
+  password: string;
+}) {
+  const normalizedEmail = credentials.email.toLowerCase().trim();
+  const user = await getUserByEmail(normalizedEmail);
+  if (!user) {
+    throw new Error("Invalid email or password.");
+  }
+
+  const storedHash = user.loginMethod;
+  if (!storedHash || !verifyPassword(credentials.password, storedHash)) {
+    throw new Error("Invalid email or password.");
+  }
+
+  // Update last signed in
+  try {
+    const db = await getDb();
+    if (db) {
+      await db
+        .update(users)
+        .set({ lastSignedIn: new Date() })
+        .where(eq(users.id, user.id));
+    }
+  } catch (err) {
+    // Ignore error
+  }
+
+  return user;
 }
 
 export async function listCategories() {

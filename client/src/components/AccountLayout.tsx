@@ -11,6 +11,9 @@ const links = [
   { href: "/wishlist", label: "Wishlist", icon: Heart },
 ];
 
+import { useState } from "react";
+import { AuthModal } from "@/components/AuthModal";
+
 export function AccountLayout({
   children,
   title,
@@ -20,6 +23,9 @@ export function AccountLayout({
 }) {
   const { loading, user, isAuthenticated } = useAuth();
   const [location] = useLocation();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("register");
+
   if (loading)
     return (
       <StorefrontLayout>
@@ -48,25 +54,46 @@ export function AccountLayout({
         </div>
       </StorefrontLayout>
     );
+
   if (!isAuthenticated)
     return (
       <StorefrontLayout>
         <div className="site-container catalog-page">
-          <h1 className="display catalog-title">Your SoleCraft account</h1>
-          <div className="empty-state" style={{ marginTop: 28 }}>
-            Sign in to view orders, saved pairs, and delivery addresses.
-            <br />
-            <button
-              className="button-primary"
-              style={{ marginTop: 18 }}
-              onClick={() => startLogin()}
-            >
-              Sign in securely
-            </button>
+          <h1 className="display catalog-title">Your SoleCraft Account</h1>
+          <div className="empty-state" style={{ marginTop: 28, maxWidth: 520, margin: "28px auto" }}>
+            <p className="text-muted leading-relaxed mb-6">
+              Create an account or sign in to view your orders, saved artisanal pairs, track deliveries, and manage your addresses.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3.5">
+              <button
+                className="button-primary"
+                onClick={() => {
+                  setAuthMode("register");
+                  setAuthModalOpen(true);
+                }}
+              >
+                Create an Account
+              </button>
+              <button
+                className="button-secondary"
+                onClick={() => {
+                  setAuthMode("login");
+                  setAuthModalOpen(true);
+                }}
+              >
+                Sign In
+              </button>
+            </div>
           </div>
         </div>
+        <AuthModal
+          isOpen={authModalOpen}
+          initialMode={authMode}
+          onClose={() => setAuthModalOpen(false)}
+        />
       </StorefrontLayout>
     );
+
   return (
     <StorefrontLayout>
       <div className="site-container account-page">
