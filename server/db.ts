@@ -1544,15 +1544,21 @@ export async function trackEvent(
   entityType?: string,
   entityId?: string
 ) {
-  const db = await requireDb();
-  await db
-    .insert(analyticsEvents)
-    .values({
-      userId,
-      eventType,
-      entityType: entityType ?? null,
-      entityId: entityId ?? null,
-    });
+  try {
+    const db = await getDb();
+    if (db) {
+      await db
+        .insert(analyticsEvents)
+        .values({
+          userId,
+          eventType,
+          entityType: entityType ?? null,
+          entityId: entityId ?? null,
+        });
+    }
+  } catch (err) {
+    // Silently ignore tracking errors in offline/mock mode
+  }
 }
 
 export async function createVerifiedReview(

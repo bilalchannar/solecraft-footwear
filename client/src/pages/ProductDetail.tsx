@@ -20,11 +20,16 @@ import { StorefrontLayout } from "@/components/StorefrontLayout";
 import { trpc } from "@/lib/trpc";
 import { luxuryEase, microSpring } from "@/lib/motion";
 
-export default function ProductDetail() {
-  const [, params] = useRoute<{ slug: string }>("/product/:slug");
+export default function ProductDetail({
+  params: routeParams,
+}: {
+  params?: { slug?: string };
+}) {
+  const [, hookParams] = useRoute<{ slug: string }>("/product/:slug");
+  const slug = routeParams?.slug ?? hookParams?.slug ?? "";
   const productQuery = trpc.storefront.product.useQuery(
-    { slug: params?.slug ?? "" },
-    { enabled: Boolean(params?.slug) }
+    { slug },
+    { enabled: Boolean(slug) }
   );
   const { isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
