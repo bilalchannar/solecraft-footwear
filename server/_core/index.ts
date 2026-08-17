@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import rateLimit from "express-rate-limit";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -28,12 +29,58 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+// 1. General API rate limiter (120 requests per minute per IP)
+const globalApiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      message: "Too many requests from this IP. Please try again in a moment.",
+      code: 429,
+    },
+  },
+});
+
+// 2. Strict rate limiter for sensitive operations (25 requests per 15 minutes per IP)
+const sensitiveApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      message:
+        "Too many sensitive attempts. Please wait 15 minutes before retrying.",
+      code: 429,
+    },
+  },
+});
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  
+
+  // Security Headers & Hardening
+  app.disable("x-powered-by");
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    next();
+  });
+
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
+  // Apply rate limiters
+  app.use("/api/", globalApiLimiter);
+  app.use("/api/trpc/checkout.placeOrder", sensitiveApiLimiter);
+  app.use("/api/trpc/checkout.createPaymentIntent", sensitiveApiLimiter);
+  app.use("/api/trpc/newsletter.subscribe", sensitiveApiLimiter);
+
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
@@ -47,7 +94,7 @@ async function startServer() {
   );
 
   // development mode uses Vite, production mode uses static files
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV !== "production") {
     await setupVite(app, server);
   } else {
     serveStatic(app);

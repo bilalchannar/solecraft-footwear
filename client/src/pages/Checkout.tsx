@@ -18,9 +18,259 @@ export default function Checkout() {
   const quote = trpc.checkout.quote.useQuery(quoteInput);
   const integrations = trpc.integrations.useQuery();
   const onlineAvailable = integrations.data?.payment.available === true;
-  const placeOrder = trpc.checkout.placeOrder.useMutation({ onSuccess: result => { toast.success(`Order ${result.orderNumber} placed successfully.`); navigate(`/account/orders?placed=${result.publicId}`); }, onError: error => toast.error(error.message) });
-  const selectedAddress = addressId ?? addresses.data?.find(address => address.isDefault === 1)?.id;
-  if (quote.isLoading || addresses.isLoading) return <StorefrontLayout><div className="site-container checkout-page"><div className="checkout-progress"><span>1. Bag</span><i /><span className="checkout-progress__active">2. Delivery</span><i /><span>3. Confirmation</span></div><div className="checkout-layout" style={{ marginTop: 30 }}><div className="summary-card"><div className="skeleton-line skeleton-line--title" /><div className="skeleton-line" style={{ height: 86, marginTop: 22 }} /><div className="skeleton-line" style={{ height: 86, marginTop: 14 }} /></div><div className="summary-card"><div className="skeleton-line" style={{ height: 22, width: "50%" }} /><div className="skeleton-line" style={{ height: 16, marginTop: 24 }} /></div></div></div></StorefrontLayout>;
-  if (!quote.data?.items.length) return <StorefrontLayout><div className="site-container checkout-page"><div className="empty-state">Your cart is empty. <Link className="button-text" href="/shop">Return to the shop</Link></div></div></StorefrontLayout>;
-  return <StorefrontLayout><div className="site-container checkout-page"><div className="breadcrumb"><Link href="/cart">Your bag</Link> / Checkout</div><div className="checkout-progress" aria-label="Checkout progress"><span>1. Bag</span><i /><span className="checkout-progress__active">2. Delivery</span><i /><span>3. Confirmation</span></div><h1 className="display catalog-title">A few final steps.</h1><div className="checkout-layout" style={{ marginTop: 30 }}><div><section className="checkout-section"><h2>Delivery address</h2>{addresses.data?.length ? <div className="address-list">{addresses.data.map(address => <button key={address.id} className={`address-choice ${selectedAddress === address.id ? "address-choice--active" : ""}`} onClick={() => setAddressId(address.id)}><strong>{address.label} · {address.fullName}</strong><span>{address.addressLine}, {address.area ? `${address.area}, ` : ""}{address.city}, {address.province}</span><span>{address.phone}</span></button>)}</div> : <div className="empty-state">Add a delivery address before placing an order. <Link className="button-text" href="/account/addresses"><Plus size={14} /> Add address</Link></div>}<Link className="button-text" href="/account/addresses" style={{ marginTop: 13 }}><Plus size={14} /> Manage addresses</Link></section><section className="checkout-section"><h2>Payment method</h2><label className={`payment-option ${paymentMethod === "cod" ? "payment-option--active" : ""}`}><input type="radio" checked={paymentMethod === "cod"} onChange={() => setPaymentMethod("cod")} /><span><strong>Cash on delivery</strong><span style={{ display: "block", color: "var(--muted)", fontSize: 12, marginTop: 4 }}>Pay when your order arrives.</span></span></label><label className={`payment-option ${paymentMethod === "online" ? "payment-option--active" : ""} ${!onlineAvailable ? "payment-option--disabled" : ""}`}><input type="radio" checked={paymentMethod === "online"} disabled={!onlineAvailable} onChange={() => setPaymentMethod("online")} /><span><strong>Online payment {!onlineAvailable && <small>(unavailable)</small>}</strong><span style={{ display: "block", color: "var(--muted)", fontSize: 12, marginTop: 4 }}>{onlineAvailable ? "Pay securely with the configured payment provider." : integrations.data?.payment.reason ?? "Checking payment provider availability…"}</span></span></label></section></div><aside className="summary-card checkout-summary"><h3>Order summary</h3>{quote.data.items.map(item => <div className="summary-row" key={item.item.id}><span>{item.product.name} × {item.item.quantity}</span><span>{pkr(item.finalPrice * item.item.quantity)}</span></div>)}<div className="coupon-field"><input value={couponDraft} onChange={event => setCouponDraft(event.target.value.toUpperCase())} placeholder="Coupon code" /><button className="button-secondary" disabled={quote.isFetching} onClick={() => setCouponCode(couponDraft.trim() || undefined)}>{quote.isFetching ? "Checking…" : "Apply"}</button></div>{quote.error && <p style={{ color: "var(--clay)", fontSize: 12 }}>{quote.error.message}</p>}<div className="summary-row"><span>Subtotal</span><span>{pkr(quote.data.subtotal)}</span></div><div className="summary-row"><span>Delivery</span><span>{pkr(quote.data.shippingAmount)}</span></div>{quote.data.couponDiscount > 0 && <div className="summary-row"><span>Coupon saving</span><span className="price-sale">− {pkr(quote.data.couponDiscount)}</span></div>}<div className="summary-row summary-row--total"><span>Total</span><span>{pkr(quote.data.total)}</span></div><button className="button-primary" disabled={!selectedAddress || placeOrder.isPending} onClick={() => { if (!selectedAddress) return toast.error("Choose a delivery address first."); placeOrder.mutate({ idempotencyKey, addressId: selectedAddress, paymentMethod, couponCode }); }}>{placeOrder.isPending ? "Placing your order…" : "Place order"}</button><p style={{ margin: "14px 0 0", color: "var(--muted)", fontSize: 11, lineHeight: 1.55 }}><CheckCircle2 size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />All totals, discounts, and stock are verified securely when you place the order.</p></aside></div></div></StorefrontLayout>;
+  const placeOrder = trpc.checkout.placeOrder.useMutation({
+    onSuccess: result => {
+      toast.success(`Order ${result.orderNumber} placed successfully.`);
+      navigate(`/account/orders?placed=${result.publicId}`);
+    },
+    onError: error => toast.error(error.message),
+  });
+  const selectedAddress =
+    addressId ?? addresses.data?.find(address => address.isDefault === 1)?.id;
+  if (quote.isLoading || addresses.isLoading)
+    return (
+      <StorefrontLayout>
+        <div className="site-container checkout-page">
+          <div className="checkout-progress">
+            <span>1. Bag</span>
+            <i />
+            <span className="checkout-progress__active">2. Delivery</span>
+            <i />
+            <span>3. Confirmation</span>
+          </div>
+          <div className="checkout-layout" style={{ marginTop: 30 }}>
+            <div className="summary-card">
+              <div className="skeleton-line skeleton-line--title" />
+              <div
+                className="skeleton-line"
+                style={{ height: 86, marginTop: 22 }}
+              />
+              <div
+                className="skeleton-line"
+                style={{ height: 86, marginTop: 14 }}
+              />
+            </div>
+            <div className="summary-card">
+              <div
+                className="skeleton-line"
+                style={{ height: 22, width: "50%" }}
+              />
+              <div
+                className="skeleton-line"
+                style={{ height: 16, marginTop: 24 }}
+              />
+            </div>
+          </div>
+        </div>
+      </StorefrontLayout>
+    );
+  if (!quote.data?.items.length)
+    return (
+      <StorefrontLayout>
+        <div className="site-container checkout-page">
+          <div className="empty-state">
+            Your cart is empty.{" "}
+            <Link className="button-text" href="/shop">
+              Return to the shop
+            </Link>
+          </div>
+        </div>
+      </StorefrontLayout>
+    );
+  return (
+    <StorefrontLayout>
+      <div className="site-container checkout-page">
+        <div className="breadcrumb">
+          <Link href="/cart">Your bag</Link> / Checkout
+        </div>
+        <div className="checkout-progress" aria-label="Checkout progress">
+          <span>1. Bag</span>
+          <i />
+          <span className="checkout-progress__active">2. Delivery</span>
+          <i />
+          <span>3. Confirmation</span>
+        </div>
+        <h1 className="display catalog-title">A few final steps.</h1>
+        <div className="checkout-layout" style={{ marginTop: 30 }}>
+          <div>
+            <section className="checkout-section">
+              <h2>Delivery address</h2>
+              {addresses.data?.length ? (
+                <div className="address-list">
+                  {addresses.data.map(address => (
+                    <button
+                      key={address.id}
+                      className={`address-choice ${selectedAddress === address.id ? "address-choice--active" : ""}`}
+                      onClick={() => setAddressId(address.id)}
+                    >
+                      <strong>
+                        {address.label} · {address.fullName}
+                      </strong>
+                      <span>
+                        {address.addressLine},{" "}
+                        {address.area ? `${address.area}, ` : ""}
+                        {address.city}, {address.province}
+                      </span>
+                      <span>{address.phone}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  Add a delivery address before placing an order.{" "}
+                  <Link className="button-text" href="/account/addresses">
+                    <Plus size={14} /> Add address
+                  </Link>
+                </div>
+              )}
+              <Link
+                className="button-text"
+                href="/account/addresses"
+                style={{ marginTop: 13 }}
+              >
+                <Plus size={14} /> Manage addresses
+              </Link>
+            </section>
+            <section className="checkout-section">
+              <h2>Payment method</h2>
+              <label
+                className={`payment-option ${paymentMethod === "cod" ? "payment-option--active" : ""}`}
+              >
+                <input
+                  type="radio"
+                  checked={paymentMethod === "cod"}
+                  onChange={() => setPaymentMethod("cod")}
+                />
+                <span>
+                  <strong>Cash on delivery</strong>
+                  <span
+                    style={{
+                      display: "block",
+                      color: "var(--muted)",
+                      fontSize: 12,
+                      marginTop: 4,
+                    }}
+                  >
+                    Pay when your order arrives.
+                  </span>
+                </span>
+              </label>
+              <label
+                className={`payment-option ${paymentMethod === "online" ? "payment-option--active" : ""} ${!onlineAvailable ? "payment-option--disabled" : ""}`}
+              >
+                <input
+                  type="radio"
+                  checked={paymentMethod === "online"}
+                  disabled={!onlineAvailable}
+                  onChange={() => setPaymentMethod("online")}
+                />
+                <span>
+                  <strong>
+                    Online payment{" "}
+                    {!onlineAvailable && <small>(unavailable)</small>}
+                  </strong>
+                  <span
+                    style={{
+                      display: "block",
+                      color: "var(--muted)",
+                      fontSize: 12,
+                      marginTop: 4,
+                    }}
+                  >
+                    {onlineAvailable
+                      ? "Pay securely with the configured payment provider."
+                      : (integrations.data?.payment.reason ??
+                        "Checking payment provider availability…")}
+                  </span>
+                </span>
+              </label>
+            </section>
+          </div>
+          <aside className="summary-card checkout-summary">
+            <h3>Order summary</h3>
+            {quote.data.items.map(item => (
+              <div className="summary-row" key={item.item.id}>
+                <span>
+                  {item.product.name} × {item.item.quantity}
+                </span>
+                <span>{pkr(item.finalPrice * item.item.quantity)}</span>
+              </div>
+            ))}
+            <div className="coupon-field">
+              <input
+                value={couponDraft}
+                onChange={event =>
+                  setCouponDraft(event.target.value.toUpperCase())
+                }
+                placeholder="Coupon code"
+              />
+              <button
+                className="button-secondary"
+                disabled={quote.isFetching}
+                onClick={() => setCouponCode(couponDraft.trim() || undefined)}
+              >
+                {quote.isFetching ? "Checking…" : "Apply"}
+              </button>
+            </div>
+            {quote.error && (
+              <p style={{ color: "var(--clay)", fontSize: 12 }}>
+                {quote.error.message}
+              </p>
+            )}
+            <div className="summary-row">
+              <span>Subtotal</span>
+              <span>{pkr(quote.data.subtotal)}</span>
+            </div>
+            <div className="summary-row">
+              <span>Delivery</span>
+              <span>{pkr(quote.data.shippingAmount)}</span>
+            </div>
+            {quote.data.couponDiscount > 0 && (
+              <div className="summary-row">
+                <span>Coupon saving</span>
+                <span className="price-sale">
+                  − {pkr(quote.data.couponDiscount)}
+                </span>
+              </div>
+            )}
+            <div className="summary-row summary-row--total">
+              <span>Total</span>
+              <span>{pkr(quote.data.total)}</span>
+            </div>
+            <button
+              className="button-primary"
+              disabled={!selectedAddress || placeOrder.isPending}
+              onClick={() => {
+                if (!selectedAddress)
+                  return toast.error("Choose a delivery address first.");
+                placeOrder.mutate({
+                  idempotencyKey,
+                  addressId: selectedAddress,
+                  paymentMethod,
+                  couponCode,
+                });
+              }}
+            >
+              {placeOrder.isPending ? "Placing your order…" : "Place order"}
+            </button>
+            <p
+              style={{
+                margin: "14px 0 0",
+                color: "var(--muted)",
+                fontSize: 11,
+                lineHeight: 1.55,
+              }}
+            >
+              <CheckCircle2
+                size={13}
+                style={{ verticalAlign: "-2px", marginRight: 4 }}
+              />
+              All totals, discounts, and stock are verified securely when you
+              place the order.
+            </p>
+          </aside>
+        </div>
+      </div>
+    </StorefrontLayout>
+  );
 }

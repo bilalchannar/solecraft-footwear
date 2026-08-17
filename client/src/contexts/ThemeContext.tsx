@@ -15,22 +15,40 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const storageKey = "solecraft-theme";
 
 function systemTheme(): ResolvedTheme {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 function initialThemeMode(defaultTheme: ThemeMode): ThemeMode {
   const requested = new URLSearchParams(window.location.search).get("theme");
-  if (requested === "light" || requested === "dark" || requested === "system") return requested;
+  if (requested === "light" || requested === "dark" || requested === "system")
+    return requested;
   const stored = localStorage.getItem(storageKey);
-  return stored === "light" || stored === "dark" || stored === "system" ? stored : defaultTheme;
+  return stored === "light" || stored === "dark" || stored === "system"
+    ? stored
+    : defaultTheme;
 }
 
-export function ThemeProvider({ children, defaultTheme = "system", switchable = true }: { children: React.ReactNode; defaultTheme?: ThemeMode; switchable?: boolean }) {
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => initialThemeMode(defaultTheme));
-  const [theme, setTheme] = useState<ResolvedTheme>(() => themeMode === "system" ? systemTheme() : themeMode);
+export function ThemeProvider({
+  children,
+  defaultTheme = "system",
+  switchable = true,
+}: {
+  children: React.ReactNode;
+  defaultTheme?: ThemeMode;
+  switchable?: boolean;
+}) {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    initialThemeMode(defaultTheme)
+  );
+  const [theme, setTheme] = useState<ResolvedTheme>(() =>
+    themeMode === "system" ? systemTheme() : themeMode
+  );
 
   useEffect(() => {
-    const resolve = () => setTheme(themeMode === "system" ? systemTheme() : themeMode);
+    const resolve = () =>
+      setTheme(themeMode === "system" ? systemTheme() : themeMode);
     resolve();
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     media.addEventListener("change", resolve);
@@ -44,15 +62,23 @@ export function ThemeProvider({ children, defaultTheme = "system", switchable = 
     localStorage.setItem(storageKey, themeMode);
   }, [theme, themeMode]);
 
-  const value = useMemo(() => ({
-    theme,
-    themeMode,
-    setThemeMode,
-    toggleTheme: () => setThemeMode(current => current === "light" ? "dark" : current === "dark" ? "system" : "light"),
-    switchable,
-  }), [theme, themeMode, switchable]);
+  const value = useMemo(
+    () => ({
+      theme,
+      themeMode,
+      setThemeMode,
+      toggleTheme: () =>
+        setThemeMode(current =>
+          current === "light" ? "dark" : current === "dark" ? "system" : "light"
+        ),
+      switchable,
+    }),
+    [theme, themeMode, switchable]
+  );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {

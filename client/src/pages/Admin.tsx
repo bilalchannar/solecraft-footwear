@@ -7,42 +7,1339 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { pkr } from "@/components/ProductCard";
 import { trpc } from "@/lib/trpc";
 
-function Gate({ children }: { children: React.ReactNode }) { const { loading, user } = useAuth(); if (loading) return <div className="loading-block">Verifying management access…</div>; if (!user) return <div className="empty-state">Sign in to access store management.<br /><button className="button-primary" onClick={() => startLogin()} style={{ marginTop: 14 }}>Sign in</button></div>; if (!["staff", "admin", "super_admin"].includes(user.role)) return <div className="empty-state">Your account does not have SoleCraft management permission.</div>; return <DashboardLayout>{children}</DashboardLayout>; }
-const Title = ({ eyebrow, title, children }: { eyebrow: string; title: string; children?: React.ReactNode }) => <div className="admin-title"><div><span className="eyebrow">{eyebrow}</span><h1 className="display">{title}</h1></div>{children}</div>;
+function Gate({ children }: { children: React.ReactNode }) {
+  const { loading, user } = useAuth();
+  if (loading)
+    return <div className="loading-block">Verifying management access…</div>;
+  if (!user)
+    return (
+      <div className="empty-state">
+        Sign in to access store management.
+        <br />
+        <button
+          className="button-primary"
+          onClick={() => startLogin()}
+          style={{ marginTop: 14 }}
+        >
+          Sign in
+        </button>
+      </div>
+    );
+  if (!["staff", "admin", "super_admin"].includes(user.role))
+    return (
+      <div className="empty-state">
+        Your account does not have SoleCraft management permission.
+      </div>
+    );
+  return <DashboardLayout>{children}</DashboardLayout>;
+}
+const Title = ({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children?: React.ReactNode;
+}) => (
+  <div className="admin-title">
+    <div>
+      <span className="eyebrow">{eyebrow}</span>
+      <h1 className="display">{title}</h1>
+    </div>
+    {children}
+  </div>
+);
 
-export function AdminOverview() { const metrics = trpc.admin.metrics.useQuery(); return <Gate><Title eyebrow="SoleCraft control room" title="Store pulse" /><div className="admin-metrics">{[{ label: "Delivered revenue", value: pkr(metrics.data?.totalRevenue ?? 0) }, { label: "Orders", value: metrics.data?.orders ?? "—" }, { label: "Pending orders", value: metrics.data?.pendingOrders ?? "—" }, { label: "Low-stock variants", value: metrics.data?.lowStock ?? "—" }, { label: "Catalog products", value: metrics.data?.products ?? "—" }].map(item => <div className="admin-metric" key={item.label}><small>{item.label}</small><strong>{item.value}</strong></div>)}</div><div className="summary-card"><h3>Action queue</h3><p style={{ color: "var(--muted)", lineHeight: 1.6 }}>Use the sidebar to review orders, refresh inventory, curate the catalog, approve purchase-verified reviews, and update customer-facing content.</p></div></Gate>; }
+export function AdminOverview() {
+  const metrics = trpc.admin.metrics.useQuery();
+  return (
+    <Gate>
+      <Title eyebrow="SoleCraft control room" title="Store pulse" />
+      <div className="admin-metrics">
+        {[
+          {
+            label: "Delivered revenue",
+            value: pkr(metrics.data?.totalRevenue ?? 0),
+          },
+          { label: "Orders", value: metrics.data?.orders ?? "—" },
+          {
+            label: "Pending orders",
+            value: metrics.data?.pendingOrders ?? "—",
+          },
+          { label: "Low-stock variants", value: metrics.data?.lowStock ?? "—" },
+          { label: "Catalog products", value: metrics.data?.products ?? "—" },
+        ].map(item => (
+          <div className="admin-metric" key={item.label}>
+            <small>{item.label}</small>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="summary-card">
+        <h3>Action queue</h3>
+        <p style={{ color: "var(--muted)", lineHeight: 1.6 }}>
+          Use the sidebar to review orders, refresh inventory, curate the
+          catalog, approve purchase-verified reviews, and update customer-facing
+          content.
+        </p>
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminProducts() { const utils = trpc.useUtils(); const products = trpc.admin.products.useQuery(); const categories = trpc.storefront.categories.useQuery(); const [open, setOpen] = useState(false); const [form, setForm] = useState({ name: "", slug: "", sku: "", basePrice: "", salePrice: "", categoryId: "", size: "", color: "", variantSku: "", stock: "0", secondSize: "", secondColor: "", secondVariantSku: "", secondStock: "0" }); const create = trpc.admin.createProduct.useMutation({ onSuccess: () => { toast.success("Product saved as a draft."); setOpen(false); utils.admin.products.invalidate(); }, onError: error => toast.error(error.message) }); const archive = trpc.admin.archiveProduct.useMutation({ onSuccess: () => utils.admin.products.invalidate(), onError: error => toast.error(error.message) }); const submit = (event: React.FormEvent) => { event.preventDefault(); create.mutate({ name: form.name, slug: form.slug, sku: form.sku, categoryId: form.categoryId ? Number(form.categoryId) : undefined, basePrice: Number(form.basePrice), salePrice: form.salePrice ? Number(form.salePrice) : undefined, status: "draft", variants: [{ sku: form.variantSku, size: form.size, color: form.color, stockOnHand: Number(form.stock) }, ...(form.secondSize && form.secondColor && form.secondVariantSku ? [{ sku: form.secondVariantSku, size: form.secondSize, color: form.secondColor, stockOnHand: Number(form.secondStock) }] : [])] }); }; return <Gate><Title eyebrow="Catalog" title="Products"><button className="button-primary" onClick={() => setOpen(value => !value)}>{open ? "Close form" : "Add product"}</button></Title>{open && <form className="admin-form" onSubmit={submit}><input placeholder="Product name" value={form.name} onChange={event => setForm({ ...form, name: event.target.value, slug: form.slug || event.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") })} required /><input placeholder="URL slug" value={form.slug} onChange={event => setForm({ ...form, slug: event.target.value })} required /><input placeholder="Master SKU" value={form.sku} onChange={event => setForm({ ...form, sku: event.target.value })} required /><select value={form.categoryId} onChange={event => setForm({ ...form, categoryId: event.target.value })}><option value="">No category</option>{categories.data?.map(category => <option value={category.id} key={category.id}>{category.name}</option>)}</select><input type="number" placeholder="Base price (PKR)" value={form.basePrice} onChange={event => setForm({ ...form, basePrice: event.target.value })} required /><input type="number" placeholder="Sale price (optional)" value={form.salePrice} onChange={event => setForm({ ...form, salePrice: event.target.value })} /><input placeholder="Size" value={form.size} onChange={event => setForm({ ...form, size: event.target.value })} required /><input placeholder="Colour" value={form.color} onChange={event => setForm({ ...form, color: event.target.value })} required /><input placeholder="Variant SKU" value={form.variantSku} onChange={event => setForm({ ...form, variantSku: event.target.value })} required /><input type="number" placeholder="Opening stock" value={form.stock} onChange={event => setForm({ ...form, stock: event.target.value })} required /><div className="admin-form__full" style={{ borderTop: "1px solid var(--line)", paddingTop: 14, marginTop: 4 }}><small style={{ color: "var(--muted)" }}>Optional second variant</small></div><input placeholder="Second size" value={form.secondSize} onChange={event => setForm({ ...form, secondSize: event.target.value })} /><input placeholder="Second colour" value={form.secondColor} onChange={event => setForm({ ...form, secondColor: event.target.value })} /><input placeholder="Second variant SKU" value={form.secondVariantSku} onChange={event => setForm({ ...form, secondVariantSku: event.target.value })} /><input type="number" placeholder="Second opening stock" value={form.secondStock} onChange={event => setForm({ ...form, secondStock: event.target.value })} /><button className="button-primary" disabled={create.isPending}>{create.isPending ? "Saving…" : "Save draft product"}</button></form>}<div className="admin-table">{products.data?.map(row => <div className="admin-table__row" key={row.product.id}><span><strong>{row.product.name}</strong><small>{row.product.sku} · {row.category ?? "Uncategorised"}</small></span><span>{row.product.status}</span><span>{pkr(row.product.salePrice ?? row.product.basePrice)}</span><button className="button-text" style={{ color: "var(--clay)" }} onClick={() => { if (window.confirm(`Archive ${row.product.name}? It will no longer appear in customer browsing.`)) archive.mutate({ productId: row.product.id }); }}>Archive</button></div>)}</div></Gate>; }
+export function AdminProducts() {
+  const utils = trpc.useUtils();
+  const products = trpc.admin.products.useQuery();
+  const categories = trpc.storefront.categories.useQuery();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    slug: "",
+    sku: "",
+    basePrice: "",
+    salePrice: "",
+    categoryId: "",
+    size: "",
+    color: "",
+    variantSku: "",
+    stock: "0",
+    secondSize: "",
+    secondColor: "",
+    secondVariantSku: "",
+    secondStock: "0",
+  });
+  const create = trpc.admin.createProduct.useMutation({
+    onSuccess: () => {
+      toast.success("Product saved as a draft.");
+      setOpen(false);
+      utils.admin.products.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const archive = trpc.admin.archiveProduct.useMutation({
+    onSuccess: () => utils.admin.products.invalidate(),
+    onError: error => toast.error(error.message),
+  });
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    create.mutate({
+      name: form.name,
+      slug: form.slug,
+      sku: form.sku,
+      categoryId: form.categoryId ? Number(form.categoryId) : undefined,
+      basePrice: Number(form.basePrice),
+      salePrice: form.salePrice ? Number(form.salePrice) : undefined,
+      status: "draft",
+      variants: [
+        {
+          sku: form.variantSku,
+          size: form.size,
+          color: form.color,
+          stockOnHand: Number(form.stock),
+        },
+        ...(form.secondSize && form.secondColor && form.secondVariantSku
+          ? [
+              {
+                sku: form.secondVariantSku,
+                size: form.secondSize,
+                color: form.secondColor,
+                stockOnHand: Number(form.secondStock),
+              },
+            ]
+          : []),
+      ],
+    });
+  };
+  return (
+    <Gate>
+      <Title eyebrow="Catalog" title="Products">
+        <button
+          className="button-primary"
+          onClick={() => setOpen(value => !value)}
+        >
+          {open ? "Close form" : "Add product"}
+        </button>
+      </Title>
+      {open && (
+        <form className="admin-form" onSubmit={submit}>
+          <input
+            placeholder="Product name"
+            value={form.name}
+            onChange={event =>
+              setForm({
+                ...form,
+                name: event.target.value,
+                slug:
+                  form.slug ||
+                  event.target.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/(^-|-$)/g, ""),
+              })
+            }
+            required
+          />
+          <input
+            placeholder="URL slug"
+            value={form.slug}
+            onChange={event => setForm({ ...form, slug: event.target.value })}
+            required
+          />
+          <input
+            placeholder="Master SKU"
+            value={form.sku}
+            onChange={event => setForm({ ...form, sku: event.target.value })}
+            required
+          />
+          <select
+            value={form.categoryId}
+            onChange={event =>
+              setForm({ ...form, categoryId: event.target.value })
+            }
+          >
+            <option value="">No category</option>
+            {categories.data?.map(category => (
+              <option value={category.id} key={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            placeholder="Base price (PKR)"
+            value={form.basePrice}
+            onChange={event =>
+              setForm({ ...form, basePrice: event.target.value })
+            }
+            required
+          />
+          <input
+            type="number"
+            placeholder="Sale price (optional)"
+            value={form.salePrice}
+            onChange={event =>
+              setForm({ ...form, salePrice: event.target.value })
+            }
+          />
+          <input
+            placeholder="Size"
+            value={form.size}
+            onChange={event => setForm({ ...form, size: event.target.value })}
+            required
+          />
+          <input
+            placeholder="Colour"
+            value={form.color}
+            onChange={event => setForm({ ...form, color: event.target.value })}
+            required
+          />
+          <input
+            placeholder="Variant SKU"
+            value={form.variantSku}
+            onChange={event =>
+              setForm({ ...form, variantSku: event.target.value })
+            }
+            required
+          />
+          <input
+            type="number"
+            placeholder="Opening stock"
+            value={form.stock}
+            onChange={event => setForm({ ...form, stock: event.target.value })}
+            required
+          />
+          <div
+            className="admin-form__full"
+            style={{
+              borderTop: "1px solid var(--line)",
+              paddingTop: 14,
+              marginTop: 4,
+            }}
+          >
+            <small style={{ color: "var(--muted)" }}>
+              Optional second variant
+            </small>
+          </div>
+          <input
+            placeholder="Second size"
+            value={form.secondSize}
+            onChange={event =>
+              setForm({ ...form, secondSize: event.target.value })
+            }
+          />
+          <input
+            placeholder="Second colour"
+            value={form.secondColor}
+            onChange={event =>
+              setForm({ ...form, secondColor: event.target.value })
+            }
+          />
+          <input
+            placeholder="Second variant SKU"
+            value={form.secondVariantSku}
+            onChange={event =>
+              setForm({ ...form, secondVariantSku: event.target.value })
+            }
+          />
+          <input
+            type="number"
+            placeholder="Second opening stock"
+            value={form.secondStock}
+            onChange={event =>
+              setForm({ ...form, secondStock: event.target.value })
+            }
+          />
+          <button className="button-primary" disabled={create.isPending}>
+            {create.isPending ? "Saving…" : "Save draft product"}
+          </button>
+        </form>
+      )}
+      <div className="admin-table">
+        {products.data?.map(row => (
+          <div className="admin-table__row" key={row.product.id}>
+            <span>
+              <strong>{row.product.name}</strong>
+              <small>
+                {row.product.sku} · {row.category ?? "Uncategorised"}
+              </small>
+            </span>
+            <span>{row.product.status}</span>
+            <span>{pkr(row.product.salePrice ?? row.product.basePrice)}</span>
+            <button
+              className="button-text"
+              style={{ color: "var(--clay)" }}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Archive ${row.product.name}? It will no longer appear in customer browsing.`
+                  )
+                )
+                  archive.mutate({ productId: row.product.id });
+              }}
+            >
+              Archive
+            </button>
+          </div>
+        ))}
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminCategories() { const utils = trpc.useUtils(); const categories = trpc.admin.categories.useQuery(); const [editing, setEditing] = useState<number | null>(null); const [form, setForm] = useState({ name: "", slug: "", sortOrder: "0" }); const finish = () => { setForm({ name: "", slug: "", sortOrder: "0" }); setEditing(null); utils.admin.categories.invalidate(); utils.storefront.categories.invalidate(); }; const create = trpc.admin.createCategory.useMutation({ onSuccess: () => { toast.success("Category created."); finish(); }, onError: error => toast.error(error.message) }); const update = trpc.admin.updateCategory.useMutation({ onSuccess: () => { toast.success("Category updated."); finish(); }, onError: error => toast.error(error.message) }); const archive = trpc.admin.archiveCategory.useMutation({ onSuccess: () => { toast.success("Category archived."); finish(); }, onError: error => toast.error(error.message) }); const submit = (event: React.FormEvent) => { event.preventDefault(); const input = { name: form.name, slug: form.slug, sortOrder: Number(form.sortOrder) }; if (editing) update.mutate({ categoryId: editing, ...input }); else create.mutate(input); }; return <Gate><Title eyebrow="Catalog taxonomy" title="Categories"><button className="button-primary" onClick={() => { setEditing(null); setForm({ name: "", slug: "", sortOrder: "0" }); }}>New category</button></Title><form className="admin-form" onSubmit={submit}><input placeholder="Category name" value={form.name} onChange={event => setForm({ ...form, name: event.target.value, slug: form.slug || event.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") })} required /><input placeholder="URL slug" value={form.slug} onChange={event => setForm({ ...form, slug: event.target.value })} required /><input type="number" placeholder="Sort order" value={form.sortOrder} onChange={event => setForm({ ...form, sortOrder: event.target.value })} required /><button className="button-primary" disabled={create.isPending || update.isPending}>{editing ? "Save category" : "Create category"}</button></form><div className="admin-table">{categories.data?.map(category => <div className="admin-table__row" key={category.id}><span><strong>{category.name}</strong><small>/{category.slug}</small></span><span>{category.active ? "Active" : "Archived"}</span><span>{category.sortOrder}</span><span style={{ display: "flex", gap: 10 }}><button className="button-text" onClick={() => { setEditing(category.id); setForm({ name: category.name, slug: category.slug, sortOrder: String(category.sortOrder) }); }}>Edit</button>{category.active === 1 && <button className="button-text" style={{ color: "var(--clay)" }} onClick={() => { if (window.confirm(`Archive ${category.name}? Products will remain but this category will no longer appear in storefront navigation.`)) archive.mutate({ categoryId: category.id }); }}>Archive</button>}</span></div>)}</div></Gate>; }
+export function AdminCategories() {
+  const utils = trpc.useUtils();
+  const categories = trpc.admin.categories.useQuery();
+  const [editing, setEditing] = useState<number | null>(null);
+  const [form, setForm] = useState({ name: "", slug: "", sortOrder: "0" });
+  const finish = () => {
+    setForm({ name: "", slug: "", sortOrder: "0" });
+    setEditing(null);
+    utils.admin.categories.invalidate();
+    utils.storefront.categories.invalidate();
+  };
+  const create = trpc.admin.createCategory.useMutation({
+    onSuccess: () => {
+      toast.success("Category created.");
+      finish();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const update = trpc.admin.updateCategory.useMutation({
+    onSuccess: () => {
+      toast.success("Category updated.");
+      finish();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const archive = trpc.admin.archiveCategory.useMutation({
+    onSuccess: () => {
+      toast.success("Category archived.");
+      finish();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const input = {
+      name: form.name,
+      slug: form.slug,
+      sortOrder: Number(form.sortOrder),
+    };
+    if (editing) update.mutate({ categoryId: editing, ...input });
+    else create.mutate(input);
+  };
+  return (
+    <Gate>
+      <Title eyebrow="Catalog taxonomy" title="Categories">
+        <button
+          className="button-primary"
+          onClick={() => {
+            setEditing(null);
+            setForm({ name: "", slug: "", sortOrder: "0" });
+          }}
+        >
+          New category
+        </button>
+      </Title>
+      <form className="admin-form" onSubmit={submit}>
+        <input
+          placeholder="Category name"
+          value={form.name}
+          onChange={event =>
+            setForm({
+              ...form,
+              name: event.target.value,
+              slug:
+                form.slug ||
+                event.target.value
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+                  .replace(/(^-|-$)/g, ""),
+            })
+          }
+          required
+        />
+        <input
+          placeholder="URL slug"
+          value={form.slug}
+          onChange={event => setForm({ ...form, slug: event.target.value })}
+          required
+        />
+        <input
+          type="number"
+          placeholder="Sort order"
+          value={form.sortOrder}
+          onChange={event =>
+            setForm({ ...form, sortOrder: event.target.value })
+          }
+          required
+        />
+        <button
+          className="button-primary"
+          disabled={create.isPending || update.isPending}
+        >
+          {editing ? "Save category" : "Create category"}
+        </button>
+      </form>
+      <div className="admin-table">
+        {categories.data?.map(category => (
+          <div className="admin-table__row" key={category.id}>
+            <span>
+              <strong>{category.name}</strong>
+              <small>/{category.slug}</small>
+            </span>
+            <span>{category.active ? "Active" : "Archived"}</span>
+            <span>{category.sortOrder}</span>
+            <span style={{ display: "flex", gap: 10 }}>
+              <button
+                className="button-text"
+                onClick={() => {
+                  setEditing(category.id);
+                  setForm({
+                    name: category.name,
+                    slug: category.slug,
+                    sortOrder: String(category.sortOrder),
+                  });
+                }}
+              >
+                Edit
+              </button>
+              {category.active === 1 && (
+                <button
+                  className="button-text"
+                  style={{ color: "var(--clay)" }}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Archive ${category.name}? Products will remain but this category will no longer appear in storefront navigation.`
+                      )
+                    )
+                      archive.mutate({ categoryId: category.id });
+                  }}
+                >
+                  Archive
+                </button>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminInventory() { const utils = trpc.useUtils(); const inventory = trpc.admin.inventory.useQuery(); const [filter, setFilter] = useState<"all" | "low" | "out">("all"); const update = trpc.admin.updateInventory.useMutation({ onSuccess: () => { toast.success("Stock level saved."); utils.admin.inventory.invalidate(); }, onError: error => toast.error(error.message) }); const visible = inventory.data?.filter(row => filter === "all" || (filter === "low" ? row.stockOnHand > 0 && row.stockOnHand <= row.lowStockThreshold : row.stockOnHand <= 0)) ?? []; return <Gate><Title eyebrow="Stock control" title="Inventory"><div style={{ display: "flex", gap: 8 }}><button className={filter === "all" ? "button-primary" : "button-secondary"} onClick={() => setFilter("all")}>All</button><button className={filter === "low" ? "button-primary" : "button-secondary"} onClick={() => setFilter("low")}>Low stock</button><button className={filter === "out" ? "button-primary" : "button-secondary"} onClick={() => setFilter("out")}>Out of stock</button></div></Title><div className="admin-table">{visible.length ? visible.map(row => <div className="admin-table__row" key={row.variant.id}><span><strong>{row.productName}</strong><small>{row.variant.sku} · {row.variant.color} · {row.variant.size}</small></span><span>{row.stockOnHand <= 0 ? <span className="status-pill">Out of stock</span> : row.stockOnHand <= row.lowStockThreshold ? <span className="status-pill">Low stock</span> : "In stock"}</span><span>{row.reservedStock} reserved</span><form onSubmit={event => { event.preventDefault(); const data = new FormData(event.currentTarget); update.mutate({ variantId: row.variant.id, stockOnHand: Number(data.get("stock")), lowStockThreshold: row.lowStockThreshold }); }} style={{ display: "flex", gap: 6 }}><input className="inventory-input" name="stock" type="number" defaultValue={row.stockOnHand} min="0" /><button className="button-text" type="submit">Save</button></form></div>) : <div className="empty-state">No variants match this stock filter.</div>}</div></Gate>; }
+export function AdminInventory() {
+  const utils = trpc.useUtils();
+  const inventory = trpc.admin.inventory.useQuery();
+  const [filter, setFilter] = useState<"all" | "low" | "out">("all");
+  const update = trpc.admin.updateInventory.useMutation({
+    onSuccess: () => {
+      toast.success("Stock level saved.");
+      utils.admin.inventory.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  const visible =
+    inventory.data?.filter(
+      row =>
+        filter === "all" ||
+        (filter === "low"
+          ? row.stockOnHand > 0 && row.stockOnHand <= row.lowStockThreshold
+          : row.stockOnHand <= 0)
+    ) ?? [];
+  return (
+    <Gate>
+      <Title eyebrow="Stock control" title="Inventory">
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className={filter === "all" ? "button-primary" : "button-secondary"}
+            onClick={() => setFilter("all")}
+          >
+            All
+          </button>
+          <button
+            className={filter === "low" ? "button-primary" : "button-secondary"}
+            onClick={() => setFilter("low")}
+          >
+            Low stock
+          </button>
+          <button
+            className={filter === "out" ? "button-primary" : "button-secondary"}
+            onClick={() => setFilter("out")}
+          >
+            Out of stock
+          </button>
+        </div>
+      </Title>
+      <div className="admin-table">
+        {visible.length ? (
+          visible.map(row => (
+            <div className="admin-table__row" key={row.variant.id}>
+              <span>
+                <strong>{row.productName}</strong>
+                <small>
+                  {row.variant.sku} · {row.variant.color} · {row.variant.size}
+                </small>
+              </span>
+              <span>
+                {row.stockOnHand <= 0 ? (
+                  <span className="status-pill">Out of stock</span>
+                ) : row.stockOnHand <= row.lowStockThreshold ? (
+                  <span className="status-pill">Low stock</span>
+                ) : (
+                  "In stock"
+                )}
+              </span>
+              <span>{row.reservedStock} reserved</span>
+              <form
+                onSubmit={event => {
+                  event.preventDefault();
+                  const data = new FormData(event.currentTarget);
+                  update.mutate({
+                    variantId: row.variant.id,
+                    stockOnHand: Number(data.get("stock")),
+                    lowStockThreshold: row.lowStockThreshold,
+                  });
+                }}
+                style={{ display: "flex", gap: 6 }}
+              >
+                <input
+                  className="inventory-input"
+                  name="stock"
+                  type="number"
+                  defaultValue={row.stockOnHand}
+                  min="0"
+                />
+                <button className="button-text" type="submit">
+                  Save
+                </button>
+              </form>
+            </div>
+          ))
+        ) : (
+          <div className="empty-state">
+            No variants match this stock filter.
+          </div>
+        )}
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminCoupons() { const utils = trpc.useUtils(); const coupons = trpc.admin.coupons.useQuery(); const [form, setForm] = useState({ code: "", kind: "percentage" as "percentage" | "fixed" | "free_shipping", value: "", minimumOrder: "", usageLimit: "" }); const save = trpc.admin.saveCoupon.useMutation({ onSuccess: () => { toast.success("Coupon saved."); setForm({ code: "", kind: "percentage", value: "", minimumOrder: "", usageLimit: "" }); utils.admin.coupons.invalidate(); }, onError: error => toast.error(error.message) }); return <Gate><Title eyebrow="Promotion rules" title="Coupons" /><form className="admin-form" onSubmit={event => { event.preventDefault(); save.mutate({ code: form.code, kind: form.kind, value: Number(form.value), minimumOrder: form.minimumOrder ? Number(form.minimumOrder) : undefined, usageLimit: form.usageLimit ? Number(form.usageLimit) : undefined }); }}><input placeholder="Code, e.g. WELCOME10" value={form.code} onChange={event => setForm({ ...form, code: event.target.value.toUpperCase() })} required /><select value={form.kind} onChange={event => setForm({ ...form, kind: event.target.value as "percentage" | "fixed" | "free_shipping" })}><option value="percentage">Percentage discount</option><option value="fixed">Fixed amount</option><option value="free_shipping">Free shipping</option></select><input type="number" placeholder="Discount value" value={form.value} onChange={event => setForm({ ...form, value: event.target.value })} required /><input type="number" placeholder="Minimum order, optional" value={form.minimumOrder} onChange={event => setForm({ ...form, minimumOrder: event.target.value })} /><input type="number" placeholder="Total use limit, optional" value={form.usageLimit} onChange={event => setForm({ ...form, usageLimit: event.target.value })} /><button className="button-primary" disabled={save.isPending}>{save.isPending ? "Saving…" : "Create coupon"}</button></form><div className="admin-table">{coupons.data?.map(coupon => <div className="admin-table__row" key={coupon.id}><span><strong>{coupon.code}</strong><small>{coupon.kind.replaceAll("_", " ")}</small></span><span>{coupon.kind === "percentage" ? `${coupon.value}%` : coupon.kind === "fixed" ? pkr(coupon.value) : "Delivery waived"}</span><span>{coupon.active ? "Active" : "Inactive"}</span></div>)}</div></Gate>; }
+export function AdminCoupons() {
+  const utils = trpc.useUtils();
+  const coupons = trpc.admin.coupons.useQuery();
+  const [form, setForm] = useState({
+    code: "",
+    kind: "percentage" as "percentage" | "fixed" | "free_shipping",
+    value: "",
+    minimumOrder: "",
+    usageLimit: "",
+  });
+  const save = trpc.admin.saveCoupon.useMutation({
+    onSuccess: () => {
+      toast.success("Coupon saved.");
+      setForm({
+        code: "",
+        kind: "percentage",
+        value: "",
+        minimumOrder: "",
+        usageLimit: "",
+      });
+      utils.admin.coupons.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  return (
+    <Gate>
+      <Title eyebrow="Promotion rules" title="Coupons" />
+      <form
+        className="admin-form"
+        onSubmit={event => {
+          event.preventDefault();
+          save.mutate({
+            code: form.code,
+            kind: form.kind,
+            value: Number(form.value),
+            minimumOrder: form.minimumOrder
+              ? Number(form.minimumOrder)
+              : undefined,
+            usageLimit: form.usageLimit ? Number(form.usageLimit) : undefined,
+          });
+        }}
+      >
+        <input
+          placeholder="Code, e.g. WELCOME10"
+          value={form.code}
+          onChange={event =>
+            setForm({ ...form, code: event.target.value.toUpperCase() })
+          }
+          required
+        />
+        <select
+          value={form.kind}
+          onChange={event =>
+            setForm({
+              ...form,
+              kind: event.target.value as
+                "percentage" | "fixed" | "free_shipping",
+            })
+          }
+        >
+          <option value="percentage">Percentage discount</option>
+          <option value="fixed">Fixed amount</option>
+          <option value="free_shipping">Free shipping</option>
+        </select>
+        <input
+          type="number"
+          placeholder="Discount value"
+          value={form.value}
+          onChange={event => setForm({ ...form, value: event.target.value })}
+          required
+        />
+        <input
+          type="number"
+          placeholder="Minimum order, optional"
+          value={form.minimumOrder}
+          onChange={event =>
+            setForm({ ...form, minimumOrder: event.target.value })
+          }
+        />
+        <input
+          type="number"
+          placeholder="Total use limit, optional"
+          value={form.usageLimit}
+          onChange={event =>
+            setForm({ ...form, usageLimit: event.target.value })
+          }
+        />
+        <button className="button-primary" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : "Create coupon"}
+        </button>
+      </form>
+      <div className="admin-table">
+        {coupons.data?.map(coupon => (
+          <div className="admin-table__row" key={coupon.id}>
+            <span>
+              <strong>{coupon.code}</strong>
+              <small>{coupon.kind.replaceAll("_", " ")}</small>
+            </span>
+            <span>
+              {coupon.kind === "percentage"
+                ? `${coupon.value}%`
+                : coupon.kind === "fixed"
+                  ? pkr(coupon.value)
+                  : "Delivery waived"}
+            </span>
+            <span>{coupon.active ? "Active" : "Inactive"}</span>
+          </div>
+        ))}
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminOrders() { const utils = trpc.useUtils(); const orders = trpc.admin.orders.useQuery(); const update = trpc.admin.updateOrderStatus.useMutation({ onSuccess: () => { toast.success("Order status updated."); utils.admin.orders.invalidate(); }, onError: error => toast.error(error.message) }); return <Gate><Title eyebrow="Fulfilment" title="Orders" /><div className="admin-table">{orders.data?.map(row => <div className="admin-table__row" key={row.order.id}><span><strong>{row.order.orderNumber}</strong><small>{row.customerName ?? row.customerEmail ?? "Customer"} · {new Date(row.order.placedAt).toLocaleDateString()}</small></span><strong>{pkr(row.order.totalAmount)}</strong><select className="admin-select" value={row.order.status} onChange={event => { const nextStatus = event.target.value as "confirmed" | "processing" | "packed" | "shipped" | "out_for_delivery" | "delivered" | "cancelled" | "returned" | "refunded"; if (window.confirm(`Change ${row.order.orderNumber} from ${row.order.status.replaceAll("_", " ")} to ${nextStatus.replaceAll("_", " ")}?`)) update.mutate({ orderId: row.order.id, status: nextStatus }); }}><option value={row.order.status}>{row.order.status.replaceAll("_", " ")}</option>{["confirmed", "processing", "packed", "shipped", "out_for_delivery", "delivered", "cancelled", "returned", "refunded"].filter(status => status !== row.order.status).map(status => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}</select></div>)}</div></Gate>; }
+export function AdminOrders() {
+  const utils = trpc.useUtils();
+  const orders = trpc.admin.orders.useQuery();
+  const update = trpc.admin.updateOrderStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Order status updated.");
+      utils.admin.orders.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  return (
+    <Gate>
+      <Title eyebrow="Fulfilment" title="Orders" />
+      <div className="admin-table">
+        {orders.data?.map(row => (
+          <div className="admin-table__row" key={row.order.id}>
+            <span>
+              <strong>{row.order.orderNumber}</strong>
+              <small>
+                {row.customerName ?? row.customerEmail ?? "Customer"} ·{" "}
+                {new Date(row.order.placedAt).toLocaleDateString()}
+              </small>
+            </span>
+            <strong>{pkr(row.order.totalAmount)}</strong>
+            <select
+              className="admin-select"
+              value={row.order.status}
+              onChange={event => {
+                const nextStatus = event.target.value as
+                  | "confirmed"
+                  | "processing"
+                  | "packed"
+                  | "shipped"
+                  | "out_for_delivery"
+                  | "delivered"
+                  | "cancelled"
+                  | "returned"
+                  | "refunded";
+                if (
+                  window.confirm(
+                    `Change ${row.order.orderNumber} from ${row.order.status.replaceAll("_", " ")} to ${nextStatus.replaceAll("_", " ")}?`
+                  )
+                )
+                  update.mutate({ orderId: row.order.id, status: nextStatus });
+              }}
+            >
+              <option value={row.order.status}>
+                {row.order.status.replaceAll("_", " ")}
+              </option>
+              {[
+                "confirmed",
+                "processing",
+                "packed",
+                "shipped",
+                "out_for_delivery",
+                "delivered",
+                "cancelled",
+                "returned",
+                "refunded",
+              ]
+                .filter(status => status !== row.order.status)
+                .map(status => (
+                  <option key={status} value={status}>
+                    {status.replaceAll("_", " ")}
+                  </option>
+                ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminCustomers() { const customers = trpc.admin.customers.useQuery(); return <Gate><Title eyebrow="Customer care" title="Customers" /><div className="admin-table">{customers.data?.map(row => <div className="admin-table__row" key={row.user.id}><span><strong>{row.profile?.fullName ?? row.user.name ?? "Customer"}</strong><small>{row.user.email ?? "No email"}</small></span><span>{row.profile?.phone ?? "No phone"}</span><span>{row.user.role}</span></div>)}</div></Gate>; }
+export function AdminCustomers() {
+  const customers = trpc.admin.customers.useQuery();
+  return (
+    <Gate>
+      <Title eyebrow="Customer care" title="Customers" />
+      <div className="admin-table">
+        {customers.data?.map(row => (
+          <div className="admin-table__row" key={row.user.id}>
+            <span>
+              <strong>
+                {row.profile?.fullName ?? row.user.name ?? "Customer"}
+              </strong>
+              <small>{row.user.email ?? "No email"}</small>
+            </span>
+            <span>{row.profile?.phone ?? "No phone"}</span>
+            <span>{row.user.role}</span>
+          </div>
+        ))}
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminReviews() { const utils = trpc.useUtils(); const reviews = trpc.admin.reviews.useQuery(); const update = trpc.admin.updateReviewStatus.useMutation({ onSuccess: () => utils.admin.reviews.invalidate(), onError: error => toast.error(error.message) }); return <Gate><Title eyebrow="Social proof" title="Purchase-verified reviews" /><div className="admin-table">{reviews.data?.map(row => <div className="admin-table__row" key={row.review.id}><span><strong>{row.productName} · {row.review.rating}/5</strong><small>{row.customerName ?? "Customer"}: {row.review.body}</small></span><span>{row.review.status}</span><span style={{ display: "flex", gap: 8 }}><button className="button-text" onClick={() => update.mutate({ reviewId: row.review.id, status: "approved" })}>Approve</button><button className="button-text" style={{ color: "var(--clay)" }} onClick={() => update.mutate({ reviewId: row.review.id, status: "rejected" })}>Reject</button></span></div>)}</div></Gate>; }
+export function AdminReviews() {
+  const utils = trpc.useUtils();
+  const reviews = trpc.admin.reviews.useQuery();
+  const update = trpc.admin.updateReviewStatus.useMutation({
+    onSuccess: () => utils.admin.reviews.invalidate(),
+    onError: error => toast.error(error.message),
+  });
+  return (
+    <Gate>
+      <Title eyebrow="Social proof" title="Purchase-verified reviews" />
+      <div className="admin-table">
+        {reviews.data?.map(row => (
+          <div className="admin-table__row" key={row.review.id}>
+            <span>
+              <strong>
+                {row.productName} · {row.review.rating}/5
+              </strong>
+              <small>
+                {row.customerName ?? "Customer"}: {row.review.body}
+              </small>
+            </span>
+            <span>{row.review.status}</span>
+            <span style={{ display: "flex", gap: 8 }}>
+              <button
+                className="button-text"
+                onClick={() =>
+                  update.mutate({ reviewId: row.review.id, status: "approved" })
+                }
+              >
+                Approve
+              </button>
+              <button
+                className="button-text"
+                style={{ color: "var(--clay)" }}
+                onClick={() =>
+                  update.mutate({ reviewId: row.review.id, status: "rejected" })
+                }
+              >
+                Reject
+              </button>
+            </span>
+          </div>
+        ))}
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminContent() { const utils = trpc.useUtils(); const cms = trpc.admin.cms.useQuery(); const [heroTitle, setHeroTitle] = useState(""); const [heroSubheading, setHeroSubheading] = useState(""); const save = trpc.admin.saveHomepageSection.useMutation({ onSuccess: () => { toast.success("Homepage hero copy saved."); utils.admin.cms.invalidate(); }, onError: error => toast.error(error.message) }); return <Gate><Title eyebrow="Storefront CMS" title="Homepage content" /><div className="summary-card"><h3>Hero copy</h3><p style={{ color: "var(--muted)", fontSize: 13 }}>This content is read by the live storefront when a hero banner does not provide its own title or subtitle.</p><form className="admin-form admin-form--single" onSubmit={event => { event.preventDefault(); save.mutate({ key: "hero", heading: heroTitle, subheading: heroSubheading, active: true, sortOrder: 0 }); }}><input placeholder={cms.data?.sections.find(section => section.key === "hero")?.heading ?? "Hero heading"} value={heroTitle} onChange={event => setHeroTitle(event.target.value)} /><input placeholder={cms.data?.sections.find(section => section.key === "hero")?.subheading ?? "Hero subheading"} value={heroSubheading} onChange={event => setHeroSubheading(event.target.value)} /><button className="button-primary" type="submit" disabled={save.isPending}>Save hero copy</button></form></div></Gate>; }
+export function AdminContent() {
+  const utils = trpc.useUtils();
+  const cms = trpc.admin.cms.useQuery();
+  const [heroTitle, setHeroTitle] = useState("");
+  const [heroSubheading, setHeroSubheading] = useState("");
+  const save = trpc.admin.saveHomepageSection.useMutation({
+    onSuccess: () => {
+      toast.success("Homepage hero copy saved.");
+      utils.admin.cms.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  return (
+    <Gate>
+      <Title eyebrow="Storefront CMS" title="Homepage content" />
+      <div className="summary-card">
+        <h3>Hero copy</h3>
+        <p style={{ color: "var(--muted)", fontSize: 13 }}>
+          This content is read by the live storefront when a hero banner does
+          not provide its own title or subtitle.
+        </p>
+        <form
+          className="admin-form admin-form--single"
+          onSubmit={event => {
+            event.preventDefault();
+            save.mutate({
+              key: "hero",
+              heading: heroTitle,
+              subheading: heroSubheading,
+              active: true,
+              sortOrder: 0,
+            });
+          }}
+        >
+          <input
+            placeholder={
+              cms.data?.sections.find(section => section.key === "hero")
+                ?.heading ?? "Hero heading"
+            }
+            value={heroTitle}
+            onChange={event => setHeroTitle(event.target.value)}
+          />
+          <input
+            placeholder={
+              cms.data?.sections.find(section => section.key === "hero")
+                ?.subheading ?? "Hero subheading"
+            }
+            value={heroSubheading}
+            onChange={event => setHeroSubheading(event.target.value)}
+          />
+          <button
+            className="button-primary"
+            type="submit"
+            disabled={save.isPending}
+          >
+            Save hero copy
+          </button>
+        </form>
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminDiscounts() { const utils = trpc.useUtils(); const discounts = trpc.admin.discounts.useQuery(); const [form, setForm] = useState({ name: "", type: "storewide" as "product" | "category" | "storewide" | "flash_sale" | "buy_x_get_y" | "first_order", valueType: "percentage" as "percentage" | "fixed", value: "", minimumOrder: "" }); const save = trpc.admin.saveDiscount.useMutation({ onSuccess: () => { toast.success("Discount campaign saved."); setForm({ name: "", type: "storewide", valueType: "percentage", value: "", minimumOrder: "" }); utils.admin.discounts.invalidate(); }, onError: error => toast.error(error.message) }); return <Gate><Title eyebrow="Promotion studio" title="Discount campaigns" /><form className="admin-form" onSubmit={event => { event.preventDefault(); save.mutate({ name: form.name, type: form.type, valueType: form.valueType, value: Number(form.value), minimumOrder: form.minimumOrder ? Number(form.minimumOrder) : undefined }); }}><input placeholder="Campaign name" value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} required /><select value={form.type} onChange={event => setForm({ ...form, type: event.target.value as typeof form.type })}><option value="storewide">Storewide</option><option value="product">Product</option><option value="category">Category</option><option value="flash_sale">Flash sale</option><option value="buy_x_get_y">Buy X get Y</option><option value="first_order">First order</option></select><select value={form.valueType} onChange={event => setForm({ ...form, valueType: event.target.value as typeof form.valueType })}><option value="percentage">Percentage</option><option value="fixed">Fixed PKR amount</option></select><input type="number" min="0" placeholder="Discount value" value={form.value} onChange={event => setForm({ ...form, value: event.target.value })} required /><input type="number" min="0" placeholder="Minimum order, optional" value={form.minimumOrder} onChange={event => setForm({ ...form, minimumOrder: event.target.value })} /><button className="button-primary" disabled={save.isPending}>{save.isPending ? "Saving…" : "Create campaign"}</button></form><div className="admin-table">{discounts.data?.map(discount => <div className="admin-table__row" key={discount.id}><span><strong>{discount.name}</strong><small>{discount.type.replaceAll("_", " ")}</small></span><span>{discount.valueType === "percentage" ? `${discount.value}%` : pkr(discount.value)}</span><span>{discount.active ? "Active" : "Inactive"}</span></div>)}</div></Gate>; }
+export function AdminDiscounts() {
+  const utils = trpc.useUtils();
+  const discounts = trpc.admin.discounts.useQuery();
+  const [form, setForm] = useState({
+    name: "",
+    type: "storewide" as
+      | "product"
+      | "category"
+      | "storewide"
+      | "flash_sale"
+      | "buy_x_get_y"
+      | "first_order",
+    valueType: "percentage" as "percentage" | "fixed",
+    value: "",
+    minimumOrder: "",
+  });
+  const save = trpc.admin.saveDiscount.useMutation({
+    onSuccess: () => {
+      toast.success("Discount campaign saved.");
+      setForm({
+        name: "",
+        type: "storewide",
+        valueType: "percentage",
+        value: "",
+        minimumOrder: "",
+      });
+      utils.admin.discounts.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  return (
+    <Gate>
+      <Title eyebrow="Promotion studio" title="Discount campaigns" />
+      <form
+        className="admin-form"
+        onSubmit={event => {
+          event.preventDefault();
+          save.mutate({
+            name: form.name,
+            type: form.type,
+            valueType: form.valueType,
+            value: Number(form.value),
+            minimumOrder: form.minimumOrder
+              ? Number(form.minimumOrder)
+              : undefined,
+          });
+        }}
+      >
+        <input
+          placeholder="Campaign name"
+          value={form.name}
+          onChange={event => setForm({ ...form, name: event.target.value })}
+          required
+        />
+        <select
+          value={form.type}
+          onChange={event =>
+            setForm({ ...form, type: event.target.value as typeof form.type })
+          }
+        >
+          <option value="storewide">Storewide</option>
+          <option value="product">Product</option>
+          <option value="category">Category</option>
+          <option value="flash_sale">Flash sale</option>
+          <option value="buy_x_get_y">Buy X get Y</option>
+          <option value="first_order">First order</option>
+        </select>
+        <select
+          value={form.valueType}
+          onChange={event =>
+            setForm({
+              ...form,
+              valueType: event.target.value as typeof form.valueType,
+            })
+          }
+        >
+          <option value="percentage">Percentage</option>
+          <option value="fixed">Fixed PKR amount</option>
+        </select>
+        <input
+          type="number"
+          min="0"
+          placeholder="Discount value"
+          value={form.value}
+          onChange={event => setForm({ ...form, value: event.target.value })}
+          required
+        />
+        <input
+          type="number"
+          min="0"
+          placeholder="Minimum order, optional"
+          value={form.minimumOrder}
+          onChange={event =>
+            setForm({ ...form, minimumOrder: event.target.value })
+          }
+        />
+        <button className="button-primary" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : "Create campaign"}
+        </button>
+      </form>
+      <div className="admin-table">
+        {discounts.data?.map(discount => (
+          <div className="admin-table__row" key={discount.id}>
+            <span>
+              <strong>{discount.name}</strong>
+              <small>{discount.type.replaceAll("_", " ")}</small>
+            </span>
+            <span>
+              {discount.valueType === "percentage"
+                ? `${discount.value}%`
+                : pkr(discount.value)}
+            </span>
+            <span>{discount.active ? "Active" : "Inactive"}</span>
+          </div>
+        ))}
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminBanners() { const utils = trpc.useUtils(); const banners = trpc.admin.banners.useQuery(); const [form, setForm] = useState({ placement: "hero", title: "", subtitle: "", imageUrl: "", href: "/shop" }); const save = trpc.admin.saveBanner.useMutation({ onSuccess: () => { toast.success("Banner saved."); setForm({ placement: "hero", title: "", subtitle: "", imageUrl: "", href: "/shop" }); utils.admin.banners.invalidate(); utils.admin.cms.invalidate(); }, onError: error => toast.error(error.message) }); return <Gate><Title eyebrow="Visual merchandising" title="Banners" /><form className="admin-form" onSubmit={event => { event.preventDefault(); save.mutate({ placement: form.placement, title: form.title || undefined, subtitle: form.subtitle || undefined, imageUrl: form.imageUrl, href: form.href || undefined }); }}><select value={form.placement} onChange={event => setForm({ ...form, placement: event.target.value })}><option value="hero">Homepage hero</option><option value="promo">Promotion</option><option value="collection">Collection</option></select><input placeholder="Banner title" value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} /><input placeholder="Image URL" type="url" value={form.imageUrl} onChange={event => setForm({ ...form, imageUrl: event.target.value })} required /><input className="address-form__full" placeholder="Supporting line" value={form.subtitle} onChange={event => setForm({ ...form, subtitle: event.target.value })} /><input placeholder="Destination path, e.g. /shop" value={form.href} onChange={event => setForm({ ...form, href: event.target.value })} /><button className="button-primary" disabled={save.isPending}>{save.isPending ? "Saving…" : "Publish banner"}</button></form><div className="admin-table">{banners.data?.map(banner => <div className="admin-table__row" key={banner.id}><span><strong>{banner.title ?? "Untitled banner"}</strong><small>{banner.placement} · {banner.href ?? "No destination"}</small></span><span>{banner.active ? "Active" : "Inactive"}</span><a className="button-text" href={banner.imageUrl} target="_blank" rel="noreferrer">Preview</a></div>)}</div></Gate>; }
+export function AdminBanners() {
+  const utils = trpc.useUtils();
+  const banners = trpc.admin.banners.useQuery();
+  const [form, setForm] = useState({
+    placement: "hero",
+    title: "",
+    subtitle: "",
+    imageUrl: "",
+    href: "/shop",
+  });
+  const save = trpc.admin.saveBanner.useMutation({
+    onSuccess: () => {
+      toast.success("Banner saved.");
+      setForm({
+        placement: "hero",
+        title: "",
+        subtitle: "",
+        imageUrl: "",
+        href: "/shop",
+      });
+      utils.admin.banners.invalidate();
+      utils.admin.cms.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  return (
+    <Gate>
+      <Title eyebrow="Visual merchandising" title="Banners" />
+      <form
+        className="admin-form"
+        onSubmit={event => {
+          event.preventDefault();
+          save.mutate({
+            placement: form.placement,
+            title: form.title || undefined,
+            subtitle: form.subtitle || undefined,
+            imageUrl: form.imageUrl,
+            href: form.href || undefined,
+          });
+        }}
+      >
+        <select
+          value={form.placement}
+          onChange={event =>
+            setForm({ ...form, placement: event.target.value })
+          }
+        >
+          <option value="hero">Homepage hero</option>
+          <option value="promo">Promotion</option>
+          <option value="collection">Collection</option>
+        </select>
+        <input
+          placeholder="Banner title"
+          value={form.title}
+          onChange={event => setForm({ ...form, title: event.target.value })}
+        />
+        <input
+          placeholder="Image URL"
+          type="url"
+          value={form.imageUrl}
+          onChange={event => setForm({ ...form, imageUrl: event.target.value })}
+          required
+        />
+        <input
+          className="address-form__full"
+          placeholder="Supporting line"
+          value={form.subtitle}
+          onChange={event => setForm({ ...form, subtitle: event.target.value })}
+        />
+        <input
+          placeholder="Destination path, e.g. /shop"
+          value={form.href}
+          onChange={event => setForm({ ...form, href: event.target.value })}
+        />
+        <button className="button-primary" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : "Publish banner"}
+        </button>
+      </form>
+      <div className="admin-table">
+        {banners.data?.map(banner => (
+          <div className="admin-table__row" key={banner.id}>
+            <span>
+              <strong>{banner.title ?? "Untitled banner"}</strong>
+              <small>
+                {banner.placement} · {banner.href ?? "No destination"}
+              </small>
+            </span>
+            <span>{banner.active ? "Active" : "Inactive"}</span>
+            <a
+              className="button-text"
+              href={banner.imageUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Preview
+            </a>
+          </div>
+        ))}
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminAnalytics() { const analytics = trpc.admin.analytics.useQuery(); const totals = analytics.data?.eventTotals ?? {}; return <Gate><Title eyebrow="Store intelligence" title="Analytics" /><div className="admin-metrics">{[{ label: "Orders recorded", value: analytics.data?.orderCount ?? "—" }, { label: "Catalog products", value: analytics.data?.productCount ?? "—" }, { label: "Product views", value: totals.product_view ?? 0 }, { label: "Events captured", value: Object.values(totals).reduce((sum, value) => sum + value, 0) }].map(item => <div className="admin-metric" key={item.label}><small>{item.label}</small><strong>{item.value}</strong></div>)}</div><div className="summary-card"><h3>Recent activity</h3><div className="admin-table">{analytics.data?.recentEvents.length ? analytics.data.recentEvents.map(event => <div className="admin-table__row" key={event.id}><span><strong>{event.eventType.replaceAll("_", " ")}</strong><small>{event.entityType ?? "Storefront"}{event.entityId ? ` · ${event.entityId}` : ""}</small></span><span>{new Date(event.createdAt).toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" })}</span></div>) : <div className="empty-state">Events will appear here as shoppers interact with the live storefront.</div>}</div></div></Gate>; }
+export function AdminAnalytics() {
+  const analytics = trpc.admin.analytics.useQuery();
+  const totals = analytics.data?.eventTotals ?? {};
+  return (
+    <Gate>
+      <Title eyebrow="Store intelligence" title="Analytics" />
+      <div className="admin-metrics">
+        {[
+          {
+            label: "Orders recorded",
+            value: analytics.data?.orderCount ?? "—",
+          },
+          {
+            label: "Catalog products",
+            value: analytics.data?.productCount ?? "—",
+          },
+          { label: "Product views", value: totals.product_view ?? 0 },
+          {
+            label: "Events captured",
+            value: Object.values(totals).reduce((sum, value) => sum + value, 0),
+          },
+        ].map(item => (
+          <div className="admin-metric" key={item.label}>
+            <small>{item.label}</small>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="summary-card">
+        <h3>Recent activity</h3>
+        <div className="admin-table">
+          {analytics.data?.recentEvents.length ? (
+            analytics.data.recentEvents.map(event => (
+              <div className="admin-table__row" key={event.id}>
+                <span>
+                  <strong>{event.eventType.replaceAll("_", " ")}</strong>
+                  <small>
+                    {event.entityType ?? "Storefront"}
+                    {event.entityId ? ` · ${event.entityId}` : ""}
+                  </small>
+                </span>
+                <span>
+                  {new Date(event.createdAt).toLocaleString("en-PK", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">
+              Events will appear here as shoppers interact with the live
+              storefront.
+            </div>
+          )}
+        </div>
+      </div>
+    </Gate>
+  );
+}
 
-export function AdminSettings() { const utils = trpc.useUtils(); const settings = trpc.admin.settings.useQuery(); const integrations = trpc.integrations.useQuery(); const [key, setKey] = useState("shipping.standard"); const [value, setValue] = useState('{"amount":250}'); const save = trpc.admin.saveSetting.useMutation({ onSuccess: () => { toast.success("Store setting saved."); utils.admin.settings.invalidate(); }, onError: error => toast.error(error.message) }); return <Gate><Title eyebrow="Store configuration" title="Settings" /><div className="summary-card" style={{ marginBottom: 18 }}><h3>External services</h3><p style={{ color: "var(--muted)", lineHeight: 1.55, marginBottom: 14 }}>Local commerce flows remain available. Connect credentials later to activate hosted payment, notification, and shipping providers.</p><div className="admin-table">{integrations.data ? Object.entries(integrations.data).map(([key, value]) => <div className="admin-table__row" key={key}><span><strong>{key.replaceAll("payment", "Payment").replaceAll("notification", "Notification").replaceAll("shipping", "Shipping")}</strong><small>{value.reason}</small></span><span className="status-pill">{value.available ? "Configured" : "Deferred placeholder"}</span></div>) : <div className="empty-state">Checking provider configuration…</div>}</div><p style={{ color: "var(--muted)", fontSize: 12, marginTop: 14 }}>Database migrations are intentionally not changed from this screen. Apply reviewed migrations through the project release workflow.</p></div><form className="admin-form admin-form--single" onSubmit={event => { event.preventDefault(); try { const parsed = JSON.parse(value); if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(); save.mutate({ key, value: parsed }); } catch { toast.error("Setting value must be a JSON object."); } }}><input placeholder="Setting key" value={key} onChange={event => setKey(event.target.value)} required /><textarea value={value} onChange={event => setValue(event.target.value)} aria-label="JSON setting value" rows={6} /><button className="button-primary" disabled={save.isPending}>{save.isPending ? "Saving…" : "Save setting"}</button></form><div className="admin-table">{settings.data?.map(setting => <div className="admin-table__row" key={setting.id}><span><strong>{setting.key}</strong><small>{JSON.stringify(setting.value)}</small></span><span>{new Date(setting.updatedAt).toLocaleDateString("en-PK")}</span></div>)}</div></Gate>; }
-
+export function AdminSettings() {
+  const utils = trpc.useUtils();
+  const settings = trpc.admin.settings.useQuery();
+  const integrations = trpc.integrations.useQuery();
+  const [key, setKey] = useState("shipping.standard");
+  const [value, setValue] = useState('{"amount":250}');
+  const save = trpc.admin.saveSetting.useMutation({
+    onSuccess: () => {
+      toast.success("Store setting saved.");
+      utils.admin.settings.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  return (
+    <Gate>
+      <Title eyebrow="Store configuration" title="Settings" />
+      <div className="summary-card" style={{ marginBottom: 18 }}>
+        <h3>External services</h3>
+        <p
+          style={{ color: "var(--muted)", lineHeight: 1.55, marginBottom: 14 }}
+        >
+          Local commerce flows remain available. Connect credentials later to
+          activate hosted payment, notification, and shipping providers.
+        </p>
+        <div className="admin-table">
+          {integrations.data ? (
+            Object.entries(integrations.data).map(([key, value]) => (
+              <div className="admin-table__row" key={key}>
+                <span>
+                  <strong>
+                    {key
+                      .replaceAll("payment", "Payment")
+                      .replaceAll("notification", "Notification")
+                      .replaceAll("shipping", "Shipping")}
+                  </strong>
+                  <small>{value.reason}</small>
+                </span>
+                <span className="status-pill">
+                  {value.available ? "Configured" : "Deferred placeholder"}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">Checking provider configuration…</div>
+          )}
+        </div>
+        <p style={{ color: "var(--muted)", fontSize: 12, marginTop: 14 }}>
+          Database migrations are intentionally not changed from this screen.
+          Apply reviewed migrations through the project release workflow.
+        </p>
+      </div>
+      <form
+        className="admin-form admin-form--single"
+        onSubmit={event => {
+          event.preventDefault();
+          try {
+            const parsed = JSON.parse(value);
+            if (!parsed || Array.isArray(parsed) || typeof parsed !== "object")
+              throw new Error();
+            save.mutate({ key, value: parsed });
+          } catch {
+            toast.error("Setting value must be a JSON object.");
+          }
+        }}
+      >
+        <input
+          placeholder="Setting key"
+          value={key}
+          onChange={event => setKey(event.target.value)}
+          required
+        />
+        <textarea
+          value={value}
+          onChange={event => setValue(event.target.value)}
+          aria-label="JSON setting value"
+          rows={6}
+        />
+        <button className="button-primary" disabled={save.isPending}>
+          {save.isPending ? "Saving…" : "Save setting"}
+        </button>
+      </form>
+      <div className="admin-table">
+        {settings.data?.map(setting => (
+          <div className="admin-table__row" key={setting.id}>
+            <span>
+              <strong>{setting.key}</strong>
+              <small>{JSON.stringify(setting.value)}</small>
+            </span>
+            <span>
+              {new Date(setting.updatedAt).toLocaleDateString("en-PK")}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Gate>
+  );
+}
 
 export function AdminReturns() {
   const utils = trpc.useUtils();
   const returns = trpc.admin.returns.useQuery();
   const update = trpc.admin.updateReturnStatus.useMutation({
-    onSuccess: () => { toast.success("Return status updated."); utils.admin.returns.invalidate(); },
+    onSuccess: () => {
+      toast.success("Return status updated.");
+      utils.admin.returns.invalidate();
+    },
     onError: error => toast.error(error.message),
   });
-  return <Gate><Title eyebrow="Customer care" title="Returns & refunds" /><div className="admin-table">{returns.isLoading ? <div className="admin-table__row"><span className="skeleton-line" /></div> : returns.data?.length ? returns.data.map(row => <div className="admin-table__row" key={row.return.id}><span><strong>{row.orderNumber}</strong><small>{row.customerName ?? row.customerEmail ?? "Customer"} · {row.return.reason}</small><small>{row.productName ?? "Item unavailable"} · {row.color ?? "—"} · {row.size ?? "—"} × {row.item?.quantity ?? 0}</small></span><span className="status-pill">{row.return.refundStatus.replaceAll("_", " ")}</span><small>{row.return.restock ? "Restock on receipt" : "Do not restock"}</small><select className="admin-select" value={row.return.status} onChange={event => { const nextStatus = event.target.value as "approved" | "rejected" | "received" | "cancelled"; if (window.confirm(`Change return status to ${nextStatus}?`)) update.mutate({ returnId: row.return.id, status: nextStatus }); }}><option value={row.return.status}>{row.return.status.replaceAll("_", " ")}</option>{["approved", "rejected", "received", "cancelled"].filter(status => status !== row.return.status).map(status => <option value={status} key={status}>{status}</option>)}</select></div>) : <div className="empty-state">No return requests have been submitted.</div>}</div></Gate>;
+  return (
+    <Gate>
+      <Title eyebrow="Customer care" title="Returns & refunds" />
+      <div className="admin-table">
+        {returns.isLoading ? (
+          <div className="admin-table__row">
+            <span className="skeleton-line" />
+          </div>
+        ) : returns.data?.length ? (
+          returns.data.map(row => (
+            <div className="admin-table__row" key={row.return.id}>
+              <span>
+                <strong>{row.orderNumber}</strong>
+                <small>
+                  {row.customerName ?? row.customerEmail ?? "Customer"} ·{" "}
+                  {row.return.reason}
+                </small>
+                <small>
+                  {row.productName ?? "Item unavailable"} · {row.color ?? "—"} ·{" "}
+                  {row.size ?? "—"} × {row.item?.quantity ?? 0}
+                </small>
+              </span>
+              <span className="status-pill">
+                {row.return.refundStatus.replaceAll("_", " ")}
+              </span>
+              <small>
+                {row.return.restock ? "Restock on receipt" : "Do not restock"}
+              </small>
+              <select
+                className="admin-select"
+                value={row.return.status}
+                onChange={event => {
+                  const nextStatus = event.target.value as
+                    "approved" | "rejected" | "received" | "cancelled";
+                  if (window.confirm(`Change return status to ${nextStatus}?`))
+                    update.mutate({
+                      returnId: row.return.id,
+                      status: nextStatus,
+                    });
+                }}
+              >
+                <option value={row.return.status}>
+                  {row.return.status.replaceAll("_", " ")}
+                </option>
+                {["approved", "rejected", "received", "cancelled"]
+                  .filter(status => status !== row.return.status)
+                  .map(status => (
+                    <option value={status} key={status}>
+                      {status}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          ))
+        ) : (
+          <div className="empty-state">
+            No return requests have been submitted.
+          </div>
+        )}
+      </div>
+    </Gate>
+  );
 }

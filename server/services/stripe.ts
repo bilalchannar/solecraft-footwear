@@ -38,7 +38,10 @@ export async function createStripePaymentIntent(params: {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Stripe payment creation failed with status ${response.status}`);
+    throw new Error(
+      errorData.error?.message ||
+        `Stripe payment creation failed with status ${response.status}`
+    );
   }
 
   const data = await response.json();

@@ -21,10 +21,28 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, FileImage, FileText, FolderTree, LayoutDashboard, LogOut, Monitor, Moon, PackageCheck, PanelLeft, Percent, Settings, ShoppingBag, Star, Sun, TicketPercent, Users, Warehouse } from "lucide-react";
+import {
+  BarChart3,
+  FileImage,
+  FileText,
+  FolderTree,
+  LayoutDashboard,
+  LogOut,
+  Monitor,
+  Moon,
+  PackageCheck,
+  PanelLeft,
+  Percent,
+  Settings,
+  ShoppingBag,
+  Star,
+  Sun,
+  TicketPercent,
+  Users,
+  Warehouse,
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -66,7 +84,11 @@ export default function DashboardLayout({
   }, [sidebarWidth]);
 
   if (loading) {
-    return <DashboardLayoutSkeleton />
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background text-muted-foreground">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
   }
 
   if (!user) {
@@ -78,7 +100,8 @@ export default function DashboardLayout({
               Sign in to continue
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
+              Access to this dashboard requires authentication. Continue to
+              launch the login flow.
             </p>
           </div>
           <Button
@@ -182,7 +205,9 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-semibold tracking-tight truncate">SoleCraft</span>
+                  <span className="font-semibold tracking-tight truncate">
+                    SoleCraft
+                  </span>
                 </div>
               ) : null}
             </div>
@@ -231,13 +256,22 @@ function DashboardLayoutContent({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setThemeMode("light")} className={themeMode === "light" ? "bg-accent" : ""}>
+                <DropdownMenuItem
+                  onClick={() => setThemeMode("light")}
+                  className={themeMode === "light" ? "bg-accent" : ""}
+                >
                   <Sun className="mr-2 h-4 w-4" /> Light theme
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setThemeMode("dark")} className={themeMode === "dark" ? "bg-accent" : ""}>
+                <DropdownMenuItem
+                  onClick={() => setThemeMode("dark")}
+                  className={themeMode === "dark" ? "bg-accent" : ""}
+                >
                   <Moon className="mr-2 h-4 w-4" /> Dark theme
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setThemeMode("system")} className={themeMode === "system" ? "bg-accent" : ""}>
+                <DropdownMenuItem
+                  onClick={() => setThemeMode("system")}
+                  className={themeMode === "system" ? "bg-accent" : ""}
+                >
                   <Monitor className="mr-2 h-4 w-4" /> System theme
                 </DropdownMenuItem>
                 <DropdownMenuItem

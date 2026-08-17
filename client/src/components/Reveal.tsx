@@ -1,14 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { luxuryEase } from "@/lib/motion";
 
-export function Reveal({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.unobserve(entry.target); } }, { threshold: .12 });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-  return <div ref={ref} className={`reveal ${visible ? "reveal--visible" : ""} ${className}`} style={{ transitionDelay: `${delay}ms` }}>{children}</div>;
+export function Reveal({
+  children,
+  className = "",
+  delay = 0,
+  y = 20,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+  y?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-30px" }}
+      transition={{
+        duration: 0.6,
+        delay: delay / 1000,
+        ease: luxuryEase,
+      }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
 }

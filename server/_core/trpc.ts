@@ -1,10 +1,24 @@
-import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
+import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from "@shared/const";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
+  errorFormatter({ shape, error }) {
+    const isProd = process.env.NODE_ENV === "production";
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        stack: isProd ? undefined : shape.data.stack,
+      },
+      message:
+        isProd && error.code === "INTERNAL_SERVER_ERROR"
+          ? "An unexpected internal error occurred. Please try again later."
+          : error.message,
+    };
+  },
 });
 
 export const router = t.router;
@@ -31,7 +45,7 @@ export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
-    if (!ctx.user || !['admin', 'super_admin'].includes(ctx.user.role)) {
+    if (!ctx.user || !["admin", "super_admin"].includes(ctx.user.role)) {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
 
@@ -41,14 +55,17 @@ export const adminProcedure = t.procedure.use(
         user: ctx.user,
       },
     });
-  }),
+  })
 );
 
 export const staffProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
-    if (!ctx.user || !['staff', 'admin', 'super_admin'].includes(ctx.user.role)) {
+    if (
+      !ctx.user ||
+      !["staff", "admin", "super_admin"].includes(ctx.user.role)
+    ) {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
 
@@ -58,5 +75,5 @@ export const staffProcedure = t.procedure.use(
         user: ctx.user,
       },
     });
-  }),
+  })
 );

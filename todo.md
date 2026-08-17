@@ -86,4 +86,3 @@
 - [x] Add explicit all, low-stock, and out-of-stock inventory filters with empty-state feedback.
 - [x] Restart the development service to clear stale transform diagnostics and confirm the current source has unique return exports.
 - [x] Re-run the full Vitest and TypeScript validation after the latest admin changes.
-
