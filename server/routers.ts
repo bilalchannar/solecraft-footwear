@@ -306,6 +306,38 @@ export const appRouter = router({
           input.customerNote
         )
       ),
+    guestPlaceOrder: publicProcedure
+      .input(
+        z.object({
+          shippingAddress: z.object({
+            fullName: z.string().min(2),
+            phone: z.string().min(10),
+            email: z.string().email().optional(),
+            city: z.string().min(2),
+            province: z.string().min(2),
+            addressLine: z.string().min(5),
+            area: z.string().optional(),
+            postalCode: z.string().optional(),
+            deliveryInstructions: z.string().optional(),
+          }),
+          paymentMethod: z.enum(["cod", "online"]),
+          couponCode: z.string().optional(),
+          customerNote: z.string().optional(),
+          totalAmount: z.number().positive(),
+          itemsCount: z.number().positive(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const orderNumber = `SC-${Date.now().toString().slice(-6)}`;
+        const publicId = `ord_guest_${Date.now()}`;
+        return {
+          publicId,
+          orderNumber,
+          paymentMethod: input.paymentMethod,
+          shippingAddress: input.shippingAddress,
+          totalAmount: input.totalAmount,
+        };
+      }),
   }),
   newsletter: router({
     subscribe: publicProcedure
