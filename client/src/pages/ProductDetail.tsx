@@ -115,7 +115,8 @@ export default function ProductDetail({
       </StorefrontLayout>
     );
 
-  const images = product.images.length
+  const fallbackImage = "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=800&q=80";
+  const images = (product.images && product.images.length > 0)
     ? product.images
     : selectedVariant?.variant.imageUrl
       ? [
@@ -125,7 +126,13 @@ export default function ProductDetail({
             altText: product.product.name,
           },
         ]
-      : [];
+      : [
+          {
+            id: 0,
+            url: fallbackImage,
+            altText: product.product.name,
+          },
+        ];
 
   const salePrice = Number(
     selectedVariant?.variant.salePriceOverride ??
@@ -140,10 +147,10 @@ export default function ProductDetail({
     0,
     (selectedVariant?.stock ?? 0) - (selectedVariant?.reserved ?? 0)
   );
-  const sizeVariants = product.variants.filter(
-    row => row.variant.color === selectedVariant?.variant.color
+  const sizeVariants = (product.variants ?? []).filter(
+    row => !selectedVariant?.variant.color || row.variant.color === selectedVariant?.variant.color
   );
-  const colorVariants = product.variants.filter(
+  const colorVariants = (product.variants ?? []).filter(
     (row, index, all) =>
       all.findIndex(item => item.variant.color === row.variant.color) === index
   );
@@ -151,6 +158,8 @@ export default function ProductDetail({
     product.product.description ??
     product.product.shortDescription ??
     "Considered Pakistani footwear for everyday movement.";
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
     <StorefrontLayout
@@ -172,7 +181,7 @@ export default function ProductDetail({
               stock > 0
                 ? "https://schema.org/InStock"
                 : "https://schema.org/OutOfStock",
-            url: `${window.location.origin}/product/${product.product.slug}`,
+            url: `${origin}/product/${product.product.slug}`,
           },
           breadcrumb: {
             "@type": "BreadcrumbList",
@@ -181,19 +190,19 @@ export default function ProductDetail({
                 "@type": "ListItem",
                 position: 1,
                 name: "Home",
-                item: `${window.location.origin}/`,
+                item: `${origin}/`,
               },
               {
                 "@type": "ListItem",
                 position: 2,
                 name: "Shop",
-                item: `${window.location.origin}/shop`,
+                item: `${origin}/shop`,
               },
               {
                 "@type": "ListItem",
                 position: 3,
                 name: product.product.name,
-                item: `${window.location.origin}/product/${product.product.slug}`,
+                item: `${origin}/product/${product.product.slug}`,
               },
             ],
           },
