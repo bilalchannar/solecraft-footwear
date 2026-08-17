@@ -17,6 +17,7 @@ import Wishlist from "./pages/Wishlist";
 import SizeGuide from "./pages/SizeGuide";
 import Shipping from "./pages/Shipping";
 import Contact from "./pages/Contact";
+import About from "./pages/About";
 import { OrderDetail, Orders } from "./pages/Orders";
 import {
   AdminAnalytics,
@@ -74,14 +75,8 @@ function Router() {
           <Route path={"/admin/content"} component={AdminContent} />
           <Route path={"/admin/analytics"} component={AdminAnalytics} />
           <Route path={"/admin/settings"} component={AdminSettings} />
-          <Route path={"/about"}>
-            {() => (
-              <StaticPage
-                title="Our craft"
-                body="SoleCraft is a footwear house founded on the preservation and refinement of Pakistan's rich artisanal heritage. Every pair of Peshawari chappals, Norozi soles, and embroidered khussas is individually handcrafted by master ustads using full-grain vegetable-tanned leathers and time-honored construction techniques."
-              />
-            )}
-          </Route>
+          <Route path={"/about"} component={About} />
+          <Route path={"/our-craft"} component={About} />
           <Route path={"/shipping"} component={Shipping} />
           <Route path={"/shipping&returns"} component={Shipping} />
           <Route path={"/delivery"} component={Shipping} />

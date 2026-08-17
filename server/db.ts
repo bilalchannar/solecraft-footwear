@@ -441,7 +441,27 @@ export async function listCatalogProducts(filters: CatalogFilters = {}) {
   // Fallback to rich mock catalog
   let filtered = [...MOCK_PRODUCTS];
   if (filters.categorySlug) {
-    filtered = filtered.filter(p => p.categorySlug === filters.categorySlug);
+    const targetSlug = filters.categorySlug.toLowerCase().trim();
+    filtered = filtered.filter(p => {
+      const pCat = p.categorySlug.toLowerCase();
+      if (pCat === targetSlug) return true;
+      if (targetSlug === "peshawari" && pCat.includes("peshawari")) return true;
+      if (targetSlug === "khussa" && pCat.includes("khussa")) return true;
+      if ((targetSlug === "norozi" || targetSlug === "kaptaan" || targetSlug === "kaptaan-norozi") && (pCat.includes("norozi") || pCat.includes("kaptaan"))) return true;
+      if ((targetSlug === "loafers" || targetSlug === "oxford" || targetSlug === "modern-loafers" || targetSlug === "formal") && (pCat.includes("loafers") || pCat.includes("modern"))) return true;
+      if ((targetSlug === "sandals" || targetSlug === "kolhapuri" || targetSlug === "sandals-kolhapuri") && (pCat.includes("sandal") || pCat.includes("kolhapuri") || pCat.includes("mule"))) return true;
+      return false;
+    });
+  }
+  if (filters.material) {
+    const mat = filters.material.toLowerCase().trim();
+    filtered = filtered.filter(p => p.material.toLowerCase().includes(mat));
+  }
+  if (filters.minPrice !== undefined) {
+    filtered = filtered.filter(p => Number(p.salePrice ?? p.basePrice) >= filters.minPrice!);
+  }
+  if (filters.maxPrice !== undefined) {
+    filtered = filtered.filter(p => Number(p.salePrice ?? p.basePrice) <= filters.maxPrice!);
   }
   if (filters.featured !== undefined) {
     filtered = filtered.filter(p => (filters.featured ? p.featured === 1 : true));
@@ -458,7 +478,8 @@ export async function listCatalogProducts(filters: CatalogFilters = {}) {
       p =>
         p.name.toLowerCase().includes(q) ||
         p.categoryName.toLowerCase().includes(q) ||
-        p.material.toLowerCase().includes(q)
+        p.material.toLowerCase().includes(q) ||
+        p.shortDescription.toLowerCase().includes(q)
     );
   }
   if (filters.sort === "price_asc") {
@@ -467,6 +488,8 @@ export async function listCatalogProducts(filters: CatalogFilters = {}) {
     filtered.sort((a, b) => Number(b.salePrice ?? b.basePrice) - Number(a.salePrice ?? a.basePrice));
   } else if (filters.sort === "best_selling") {
     filtered.sort((a, b) => b.bestSeller - a.bestSeller);
+  } else if (filters.sort === "newest") {
+    filtered.sort((a, b) => b.isNew - a.isNew);
   }
   if (filters.limit) {
     filtered = filtered.slice(0, filters.limit);
