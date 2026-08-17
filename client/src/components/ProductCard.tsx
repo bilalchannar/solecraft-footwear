@@ -110,10 +110,14 @@ export function ProductCard({ product }: { product: StoreProduct }) {
         className={`product-card__wish ${saved ? "product-card__wish--saved" : ""}`}
         aria-label={`${saved ? "Remove" : "Save"} ${product.name}`}
         aria-pressed={saved}
-        disabled={toggleWishlist.isPending}
         onClick={() => {
-          if (!isAuthenticated) return startLogin();
-          toggleWishlist.mutate({ productId: product.id });
+          if (isAuthenticated) {
+            toggleWishlist.mutate({ productId: product.id });
+          } else {
+            const next = !saved;
+            setSaved(next);
+            toast.success(next ? "Saved to your wishlist!" : "Removed from wishlist");
+          }
         }}
       >
         <motion.span

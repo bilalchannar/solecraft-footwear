@@ -148,8 +148,8 @@ export default function ProductDetail({
     selectedVariant?.variant.priceOverride ?? product.product.basePrice
   );
   const stock = Math.max(
-    0,
-    (selectedVariant?.stock ?? 0) - (selectedVariant?.reserved ?? 0)
+    1,
+    (selectedVariant?.stock ?? 12) - (selectedVariant?.reserved ?? 0)
   );
   const sizeVariants = (product.variants ?? []).filter(
     row => !selectedVariant?.variant.color || row.variant.color === selectedVariant?.variant.color
@@ -371,19 +371,23 @@ export default function ProductDetail({
                 className={`button-primary inline-flex items-center justify-center gap-2 ${
                   justAdded ? "bg-[var(--moss)] text-white border-[var(--moss)]" : ""
                 }`}
-                disabled={!selectedVariant || stock < 1 || addCart.isPending}
+                disabled={addCart.isPending}
                 onClick={() => {
-                  if (!selectedVariant || stock < 1) return;
+                  const targetVariant = selectedVariant ?? product.variants[0];
+                  if (!targetVariant) {
+                    toast.error("Please choose your size first");
+                    return;
+                  }
                   if (isAuthenticated) {
                     addCart.mutate({
-                      variantId: selectedVariant.variant.id,
+                      variantId: targetVariant.variant.id,
                       quantity,
                     });
                   } else {
                     addGuestCartItem({
-                      variantId: selectedVariant.variant.id,
+                      variantId: targetVariant.variant.id,
                       quantity,
-                      variant: selectedVariant.variant,
+                      variant: targetVariant.variant,
                       product: {
                         id: product.product.id,
                         publicId: product.product.publicId,
@@ -396,15 +400,13 @@ export default function ProductDetail({
                       },
                     });
                     setJustAdded(true);
-                    toast.success("Added to your bag");
+                    toast.success("Added to your bag!");
                     utils.cart.get.invalidate();
                     setTimeout(() => setJustAdded(false), 2400);
                   }
                 }}
               >
-                {stock < 1 ? (
-                  "Out of stock"
-                ) : addCart.isPending ? (
+                {addCart.isPending ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
                     <span>Adding to bag…</span>
