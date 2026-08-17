@@ -5,6 +5,7 @@ import {
   Loader2,
   Minus,
   Plus,
+  Ruler,
   ShieldCheck,
   ShoppingBag,
   Truck,
@@ -17,6 +18,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { pkr } from "@/components/ProductCard";
 import { StorefrontLayout } from "@/components/StorefrontLayout";
+import { SizeGuideModal } from "@/components/SizeGuideModal";
+import { addGuestCartItem } from "@/lib/cartStorage";
 import { trpc } from "@/lib/trpc";
 import { luxuryEase, microSpring } from "@/lib/motion";
 
@@ -40,6 +43,7 @@ export default function ProductDetail({
   const [quantity, setQuantity] = useState(1);
   const [saved, setSaved] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   const product = productQuery.data;
 
@@ -300,11 +304,21 @@ export default function ProductDetail({
               ))}
             </div>
 
-            <div className="option-label">
-              Size{" "}
-              <span className={stock ? "stock-ready" : "stock-empty"}>
-                {stock ? `${stock} available` : "Out of stock"}
-              </span>
+            <div className="option-label flex items-center justify-between">
+              <div>
+                Size{" "}
+                <span className={stock ? "stock-ready" : "stock-empty"}>
+                  {stock ? `${stock} available` : "Out of stock"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSizeGuideOpen(true)}
+                className="text-xs text-[var(--moss)] hover:underline flex items-center gap-1 font-semibold cursor-pointer bg-transparent border-0 p-0"
+              >
+                <Ruler size={13} />
+                <span>Size Guide</span>
+              </button>
             </div>
             <div className="size-options">
               {sizeVariants.map(row => (
@@ -355,15 +369,37 @@ export default function ProductDetail({
                 whileTap={{ scale: 0.97 }}
                 transition={microSpring}
                 className={`button-primary inline-flex items-center justify-center gap-2 ${
-                  justAdded ? "bg-moss text-white border-moss" : ""
+                  justAdded ? "bg-[var(--moss)] text-white border-[var(--moss)]" : ""
                 }`}
                 disabled={!selectedVariant || stock < 1 || addCart.isPending}
                 onClick={() => {
-                  if (!isAuthenticated) return startLogin();
-                  addCart.mutate({
-                    variantId: selectedVariant!.variant.id,
-                    quantity,
-                  });
+                  if (!selectedVariant || stock < 1) return;
+                  if (isAuthenticated) {
+                    addCart.mutate({
+                      variantId: selectedVariant.variant.id,
+                      quantity,
+                    });
+                  } else {
+                    addGuestCartItem({
+                      variantId: selectedVariant.variant.id,
+                      quantity,
+                      variant: selectedVariant.variant,
+                      product: {
+                        id: product.product.id,
+                        publicId: product.product.publicId,
+                        name: product.product.name,
+                        slug: product.product.slug,
+                        material: product.product.material,
+                        basePrice: product.product.basePrice,
+                        salePrice: product.product.salePrice,
+                        image: images[0]?.url ?? null,
+                      },
+                    });
+                    setJustAdded(true);
+                    toast.success("Added to your bag");
+                    utils.cart.get.invalidate();
+                    setTimeout(() => setJustAdded(false), 2400);
+                  }
                 }}
               >
                 {stock < 1 ? (
@@ -387,16 +423,21 @@ export default function ProductDetail({
               </motion.button>
 
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.85 }}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
                 transition={microSpring}
-                className={`button-secondary ${saved ? "wishlist-detail--saved" : ""}`}
-                aria-label={`${saved ? "Remove" : "Save"} to wishlist`}
-                aria-pressed={saved}
+                className="icon-button"
+                aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
                 disabled={toggleWishlist.isPending}
                 onClick={() => {
-                  if (!isAuthenticated) return startLogin();
-                  toggleWishlist.mutate({ productId: product.product.id });
+                  if (isAuthenticated) {
+                    toggleWishlist.mutate({ productId: product.product.id });
+                  } else {
+                    setSaved(!saved);
+                    toast.success(
+                      !saved ? "Saved to your wishlist" : "Removed from wishlist"
+                    );
+                  }
                 }}
               >
                 <Heart fill={saved ? "currentColor" : "none"} size={18} />
@@ -405,21 +446,23 @@ export default function ProductDetail({
 
             <div className="product-promise">
               <div>
-                <Truck size={15} /> Pakistan-wide delivery with clear order
-                tracking.
+                <Truck size={15} /> Free Pakistan-wide delivery over PKR 4,000 with live SMS tracking.
               </div>
               <div>
-                <ShieldCheck size={15} /> Cash on delivery and secure online
-                payment states at checkout.
+                <ShieldCheck size={15} /> Cash on delivery with open parcel inspection allowed on doorstep.
               </div>
               <div>
-                <Check size={15} /> Read product material and variant
-                information before purchasing.
+                <Check size={15} /> 14-day hassle-free size exchange guarantee nationwide.
               </div>
             </div>
           </motion.div>
         </div>
       </div>
+
+      <SizeGuideModal
+        isOpen={sizeGuideOpen}
+        onClose={() => setSizeGuideOpen(false)}
+      />
 
       {product.reviews.length > 0 && (
         <section className="section">

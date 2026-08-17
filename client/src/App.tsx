@@ -14,6 +14,9 @@ import StaticPage from "./pages/StaticPage";
 import Account from "./pages/Account";
 import Addresses from "./pages/Addresses";
 import Wishlist from "./pages/Wishlist";
+import SizeGuide from "./pages/SizeGuide";
+import Shipping from "./pages/Shipping";
+import Contact from "./pages/Contact";
 import { OrderDetail, Orders } from "./pages/Orders";
 import {
   AdminAnalytics,
@@ -75,34 +78,16 @@ function Router() {
             {() => (
               <StaticPage
                 title="Our craft"
-                body="SoleCraft is a storefront built around transparent product details, considered footwear, and a connected delivery experience. Product materials, sizing, and availability are managed directly from the catalog."
+                body="SoleCraft is a footwear house founded on the preservation and refinement of Pakistan's rich artisanal heritage. Every pair of Peshawari chappals, Norozi soles, and embroidered khussas is individually handcrafted by master ustads using full-grain vegetable-tanned leathers and time-honored construction techniques."
               />
             )}
           </Route>
-          <Route path={"/shipping&returns"}>
-            {() => (
-              <StaticPage
-                title="Shipping & returns"
-                body="Shipping information and return eligibility are presented with every order flow. Confirmed delivery timings, tracking, and return conditions are managed through the commerce administration experience."
-              />
-            )}
-          </Route>
-          <Route path={"/size-guide"}>
-            {() => (
-              <StaticPage
-                title="Size guide"
-                body="Select your usual size from the available product variants. For a closer fit recommendation, refer to the material and silhouette details shown on every product page."
-              />
-            )}
-          </Route>
-          <Route path={"/contact"}>
-            {() => (
-              <StaticPage
-                title="Contact"
-                body="For order support, delivery questions, or product information, contact the SoleCraft team using the support details managed by the store administrator."
-              />
-            )}
-          </Route>
+          <Route path={"/shipping"} component={Shipping} />
+          <Route path={"/shipping&returns"} component={Shipping} />
+          <Route path={"/delivery"} component={Shipping} />
+          <Route path={"/size-guide"} component={SizeGuide} />
+          <Route path={"/contact"} component={Contact} />
+          <Route path={"/support"} component={Contact} />
           <Route path={"/404"} component={NotFound} />
           {/* Final fallback route */}
           <Route component={NotFound} />

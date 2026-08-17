@@ -17,6 +17,7 @@ import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Seo } from "@/components/Seo";
 import { AuthModal } from "@/components/AuthModal";
+import { getGuestCart } from "@/lib/cartStorage";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import { luxuryEase, microSpring, slideUpVariants } from "@/lib/motion";
@@ -96,9 +97,25 @@ export function StorefrontLayout({
     { query: searchTerm },
     { enabled: searchOpen && searchTerm.trim().length > 1 }
   );
-  const cartCount =
-    cart.data?.items.reduce((count, item) => count + item.item.quantity, 0) ??
-    0;
+  const [guestCount, setGuestCount] = useState(() => {
+    return getGuestCart().reduce((sum, item) => sum + item.quantity, 0);
+  });
+
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      setGuestCount(getGuestCart().reduce((sum, item) => sum + item.quantity, 0));
+    };
+    window.addEventListener("solecraft_cart_updated", handleCartUpdate);
+    window.addEventListener("storage", handleCartUpdate);
+    return () => {
+      window.removeEventListener("solecraft_cart_updated", handleCartUpdate);
+      window.removeEventListener("storage", handleCartUpdate);
+    };
+  }, []);
+
+  const cartCount = isAuthenticated
+    ? (cart.data?.items.reduce((count, item) => count + item.item.quantity, 0) ?? 0)
+    : guestCount;
 
   useEffect(() => {
     const handleScroll = () => {
