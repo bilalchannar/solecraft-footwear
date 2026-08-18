@@ -104,8 +104,40 @@ export function assertCheckoutStock(lines: CheckoutStockLine[]) {
 
 import { hashPassword, verifyPassword } from "./_core/password";
 
-const MEMORY_USERS: Map<string, typeof users.$inferSelect & { passwordHash?: string }> = new Map();
-const MEMORY_PROFILES: Map<number, typeof profiles.$inferSelect> = new Map();
+const DEFAULT_ADMIN_HASH = hashPassword("admin123");
+const MEMORY_USERS: Map<string, typeof users.$inferSelect & { passwordHash?: string }> = new Map([
+  [
+    "usr_admin_default_01",
+    {
+      id: 1,
+      openId: "usr_admin_default_01",
+      name: "SoleCraft Administrator",
+      email: "admin@solecraft.pk",
+      loginMethod: DEFAULT_ADMIN_HASH,
+      role: "super_admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastSignedIn: new Date(),
+      passwordHash: DEFAULT_ADMIN_HASH,
+    },
+  ],
+]);
+const MEMORY_PROFILES: Map<number, typeof profiles.$inferSelect> = new Map([
+  [
+    1,
+    {
+      id: 1,
+      userId: 1,
+      fullName: "SoleCraft Administrator",
+      phone: "+92 300 1234567",
+      avatarUrl: null,
+      marketingOptIn: 1,
+      disabledAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ],
+]);
 let mockUserIdSeq = 100;
 
 export async function upsertUser(user: InsertUser): Promise<void> {

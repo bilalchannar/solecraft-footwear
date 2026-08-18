@@ -2,35 +2,208 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { startLogin } from "@/const";
 import DashboardLayout from "@/components/DashboardLayout";
 import { pkr } from "@/components/ProductCard";
 import { trpc } from "@/lib/trpc";
+import { ShieldCheck, Lock, Mail, Eye, EyeOff, Sparkles, ArrowRight, LogOut, ArrowLeft } from "lucide-react";
+
+function AdminLoginForm() {
+  const { login, logout, user } = useAuth();
+  const [email, setEmail] = useState("admin@solecraft.pk");
+  const [password, setPassword] = useState("admin123");
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error("Please enter your admin email address.");
+      return;
+    }
+    if (!password) {
+      toast.error("Please enter your admin password.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await login({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (["staff", "admin", "super_admin"].includes(res.user.role)) {
+        toast.success(`Welcome to SoleCraft Admin, ${res.user.name || "Administrator"}!`);
+      } else {
+        toast.warning("Signed in, but this account lacks management privileges.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to authenticate as administrator.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const fillDemoAdmin = () => {
+    setEmail("admin@solecraft.pk");
+    setPassword("admin123");
+    toast.info("Demo administrator credentials applied.");
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--surface)" }}>
+      <div
+        className="w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-xl border border-line"
+        style={{ background: "var(--paper)" }}
+      >
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div
+            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3 shadow-md"
+            style={{ background: "var(--moss)", color: "#fff" }}
+          >
+            <ShieldCheck size={28} />
+          </div>
+          <div className="eyebrow uppercase tracking-widest text-xs font-semibold mb-1" style={{ color: "var(--moss)" }}>
+            SoleCraft Management
+          </div>
+          <h1 className="display text-2xl sm:text-3xl font-bold text-ink mb-1.5">
+            Admin Portal
+          </h1>
+          <p className="text-xs sm:text-sm text-muted">
+            Enter administrative credentials to manage catalog, orders, and store operations.
+          </p>
+        </div>
+
+        {/* If logged in with non-admin role */}
+        {user && !["staff", "admin", "super_admin"].includes(user.role) && (
+          <div
+            className="mb-5 p-3.5 rounded-xl text-xs border border-amber-200 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 text-amber-900 dark:text-amber-200"
+          >
+            <p className="font-semibold mb-1">Customer Account Active</p>
+            <p className="mb-2">
+              Signed in as <strong>{user.name || user.email}</strong> (Customer). Admin privileges required.
+            </p>
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-200 dark:bg-amber-900/60 font-semibold text-xs hover:opacity-90 transition-opacity"
+            >
+              <LogOut size={13} /> Switch to Admin Account
+            </button>
+          </div>
+        )}
+
+        {/* Quick Demo Fill Pill */}
+        <div className="mb-5">
+          <button
+            type="button"
+            onClick={fillDemoAdmin}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-dashed border-moss/40 text-xs font-medium transition-all hover:bg-moss/10"
+            style={{ color: "var(--moss)" }}
+          >
+            <Sparkles size={14} />
+            <span>Click to Autofill Demo Admin (`admin@solecraft.pk`)</span>
+          </button>
+        </div>
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-ink mb-1.5">
+              Admin Email Address
+            </label>
+            <div className="relative flex items-center">
+              <Mail
+                size={17}
+                className="absolute left-3 text-muted pointer-events-none"
+              />
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="admin@solecraft.pk"
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm transition-all focus:border-moss focus:ring-1 focus:ring-moss outline-none"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-ink mb-1.5">
+              Admin Password
+            </label>
+            <div className="relative flex items-center">
+              <Lock
+                size={17}
+                className="absolute left-3 text-muted pointer-events-none"
+              />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm transition-all focus:border-moss focus:ring-1 focus:ring-moss outline-none"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 text-muted hover:text-ink transition-colors p-1"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full mt-2 py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm shadow-md transition-all"
+            style={{
+              background: "var(--moss)",
+              color: "#ffffff",
+              opacity: submitting ? 0.7 : 1,
+              cursor: submitting ? "not-allowed" : "pointer",
+            }}
+          >
+            {submitting ? (
+              <span>Authenticating...</span>
+            ) : (
+              <>
+                <span>Sign In to Admin Portal</span>
+                <ArrowRight size={16} />
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Back to store */}
+        <div className="mt-6 pt-4 border-t border-line text-center">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors"
+          >
+            <ArrowLeft size={13} />
+            <span>Return to SoleCraft Storefront</span>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Gate({ children }: { children: React.ReactNode }) {
   const { loading, user } = useAuth();
   if (loading)
-    return <div className="loading-block">Verifying management access…</div>;
-  if (!user)
     return (
-      <div className="empty-state">
-        Sign in to access store management.
-        <br />
-        <button
-          className="button-primary"
-          onClick={() => startLogin()}
-          style={{ marginTop: 14 }}
-        >
-          Sign in
-        </button>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="loading-block">Verifying administrative credentials…</div>
       </div>
     );
-  if (!["staff", "admin", "super_admin"].includes(user.role))
-    return (
-      <div className="empty-state">
-        Your account does not have SoleCraft management permission.
-      </div>
-    );
+  if (!user || !["staff", "admin", "super_admin"].includes(user.role))
+    return <AdminLoginForm />;
   return <DashboardLayout>{children}</DashboardLayout>;
 }
 const Title = ({

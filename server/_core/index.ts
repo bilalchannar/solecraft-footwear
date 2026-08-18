@@ -58,7 +58,10 @@ const sensitiveApiLimiter = rateLimit({
   },
 });
 
+console.log("[Server] Initializing SoleCraft server...");
+
 async function startServer() {
+  console.log("[Server] Creating Express app and HTTP server...");
   const app = express();
   const server = createServer(app);
 
@@ -95,7 +98,9 @@ async function startServer() {
 
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV !== "production") {
+    console.log("[Server] Configuring Vite middleware...");
     await setupVite(app, server);
+    console.log("[Server] Vite middleware configured.");
   } else {
     serveStatic(app);
   }
@@ -111,4 +116,6 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+startServer().catch(err => {
+  console.error("[Server Error]", err);
+});
