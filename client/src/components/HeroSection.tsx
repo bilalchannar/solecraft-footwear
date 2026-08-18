@@ -1,14 +1,18 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import {
   AnimatePresence,
   motion,
-  useMotionValue,
-  useSpring,
-  useTransform,
+  useReducedMotion,
 } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { luxuryEase, microSpring, textWordVariants } from "@/lib/motion";
+import {
+  usePointerScene,
+  useParallax,
+  useDepthCapable,
+  DEPTH,
+} from "@/lib/use3d";
 
 const defaultBanners: HeroBanner[] = [
   {
@@ -43,6 +47,37 @@ export type HeroBanner = {
   placement?: string;
 };
 
+/* ---- Slide transition variants (3D depth) ---- */
+const slideImageVariants = {
+  initial: { opacity: 0, scale: 0.94, z: -60, rotateY: -3 },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    z: 0,
+    rotateY: 0,
+    transition: { duration: 0.72, ease: luxuryEase },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.96,
+    z: -80,
+    rotateY: 2,
+    transition: { duration: 0.45, ease: luxuryEase },
+  },
+};
+
+const slideCopyVariants = {
+  initial: { opacity: 0 },
+  animate: {
+    opacity: 1,
+    transition: { duration: 0.5, ease: luxuryEase },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.3, ease: luxuryEase },
+  },
+};
+
 export function HeroSection({
   banners = [],
   defaultTitle = "Steps crafted for your everyday journey.",
@@ -53,8 +88,9 @@ export function HeroSection({
   defaultSubtitle?: string;
 }) {
   const slides: HeroBanner[] = banners.length > 0 ? banners : defaultBanners;
-
   const [currentSlide, setCurrentSlide] = useState(0);
+  const reduced = useReducedMotion();
+  const depthCapable = useDepthCapable();
 
   // Auto-play slides continuously every 4.5 seconds
   useEffect(() => {
@@ -65,30 +101,20 @@ export function HeroSection({
     return () => clearInterval(interval);
   }, [slides.length]);
 
-  // Desktop Mouse Parallax Effect
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const springX = useSpring(mouseX, { stiffness: 100, damping: 20 });
-  const springY = useSpring(mouseY, { stiffness: 100, damping: 20 });
-  const imageTiltX = useTransform(springY, [-0.5, 0.5], [5, -5]);
-  const imageTiltY = useTransform(springX, [-0.5, 0.5], [-5, 5]);
-  const glowX = useTransform(springX, [-0.5, 0.5], ["-15%", "15%"]);
-  const glowY = useTransform(springY, [-0.5, 0.5], ["-15%", "15%"]);
+  // Pointer scene for multi-layer parallax
+  const scene = usePointerScene<HTMLDivElement>({
+    spring: DEPTH.sceneSpring,
+  });
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    mouseX.set(x);
-    mouseY.set(y);
-  };
-
-  const handleMouseLeave = () => {
-    mouseX.set(0);
-    mouseY.set(0);
-  };
+  // Parallax layers — each moves at a different speed for depth
+  const glowX = useParallax(scene.px, 30);
+  const glowY = useParallax(scene.py, 30);
+  const imageTiltY = useParallax(scene.px, DEPTH.heroTilt);
+  const imageTiltX = useParallax(scene.py, -DEPTH.heroTilt);
+  const stampX = useParallax(scene.px, 12);
+  const stampY = useParallax(scene.py, 10);
+  const floatOffsetX = useParallax(scene.px, 18);
+  const floatOffsetY = useParallax(scene.py, 14);
 
   const slide = slides[currentSlide] ?? slides[0];
   const slideTitle = slide?.title || defaultTitle;
@@ -102,29 +128,48 @@ export function HeroSection({
   return (
     <section
       className="hero relative overflow-hidden"
-      ref={containerRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      ref={scene.ref}
+      {...scene.handlers}
     >
-      {/* Ambient background glow */}
+      {/* Ambient background glow — responds to pointer */}
       <motion.div
-        style={{ x: glowX, y: glowY }}
+        style={depthCapable ? { x: glowX, y: glowY } : undefined}
         className="hero__ambient-glow pointer-events-none"
       />
+
+      {/* Floating decorative 3D elements — behind content */}
+      {!reduced && (
+        <>
+          <motion.div
+            className="hero__float-el hero__float-el--diamond"
+            style={depthCapable ? { x: floatOffsetX, y: floatOffsetY } : undefined}
+          />
+          <motion.div
+            className="hero__float-el hero__float-el--ring"
+            style={depthCapable ? { x: floatOffsetX, y: floatOffsetY } : undefined}
+          />
+          <motion.div
+            className="hero__float-el hero__float-el--dot"
+            style={depthCapable ? { x: floatOffsetX, y: floatOffsetY } : undefined}
+          />
+        </>
+      )}
 
       <div className="site-container relative z-10">
         <div className="hero__panel relative">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentSlide}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.45, ease: luxuryEase }}
               className="hero__content-grid"
             >
               {/* Copy Side */}
-              <div className="hero__copy">
+              <motion.div
+                className="hero__copy"
+                variants={slideCopyVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -137,7 +182,7 @@ export function HeroSection({
                   </span>
                 </motion.div>
 
-                {/* Two-color staggered animated headline */}
+                {/* Two-color staggered animated headline with subtle depth entrance */}
                 <h1 className="display hero__title">
                   <span className="block text-ink font-medium">
                     {titlePart1.split(" ").map((word, i) => (
@@ -148,6 +193,10 @@ export function HeroSection({
                         animate="visible"
                         transition={{ delay: 0.08 + i * 0.05 }}
                         className="inline-block mr-2.5"
+                        style={{
+                          transformPerspective: 800,
+                          transformOrigin: "50% 100%",
+                        }}
                       >
                         {word}
                       </motion.span>
@@ -164,6 +213,10 @@ export function HeroSection({
                           delay: 0.08 + (midPoint + i) * 0.05,
                         }}
                         className="inline-block mr-2.5"
+                        style={{
+                          transformPerspective: 800,
+                          transformOrigin: "50% 100%",
+                        }}
                       >
                         {word}
                       </motion.span>
@@ -220,18 +273,20 @@ export function HeroSection({
                     </Link>
                   </motion.div>
                 </motion.div>
-              </div>
+              </motion.div>
 
-              {/* Interactive Image Side with 3D Parallax & Scale */}
+              {/* Interactive Image Side with 3D Parallax & Depth Transitions */}
               <div className="hero__visual-wrap relative flex items-center justify-center">
                 <motion.div
-                  style={{
-                    rotateX: imageTiltX,
-                    rotateY: imageTiltY,
-                  }}
-                  initial={{ scale: 0.92, opacity: 0, y: 20 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, ease: luxuryEase }}
+                  style={
+                    depthCapable
+                      ? { rotateX: imageTiltX, rotateY: imageTiltY }
+                      : undefined
+                  }
+                  variants={slideImageVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
                   className="hero__image-card relative w-full h-full"
                 >
                   <div
@@ -242,7 +297,7 @@ export function HeroSection({
                   />
                 </motion.div>
 
-                {/* Floating Craft Badge with Micro-Motion */}
+                {/* Floating Craft Badge with Micro-Motion + Pointer Parallax */}
                 <motion.div
                   animate={{
                     y: [0, -6, 0],
@@ -252,6 +307,11 @@ export function HeroSection({
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
+                  style={
+                    depthCapable
+                      ? { x: stampX, y: stampY }
+                      : undefined
+                  }
                   className="hero__stamp select-none"
                 >
                   Made for

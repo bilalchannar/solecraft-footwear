@@ -10,7 +10,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
@@ -21,6 +21,7 @@ import { getGuestCart } from "@/lib/cartStorage";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import { luxuryEase, microSpring, slideUpVariants } from "@/lib/motion";
+import { CART_BUMP_EVENT } from "@/lib/flyToCart";
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const [location] = useLocation();
@@ -74,6 +75,8 @@ export function StorefrontLayout({
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
+  const [cartBump, setCartBump] = useState(false);
+  const cartIconRef = useRef<HTMLDivElement>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>(() =>
     JSON.parse(localStorage.getItem("solecraft-recent-searches") ?? "[]")
   );
@@ -124,6 +127,17 @@ export function StorefrontLayout({
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Listen for cart bump events (fly-to-cart landed)
+  useEffect(() => {
+    const onBump = () => {
+      setCartBump(true);
+      setTimeout(() => setCartBump(false), 400);
+    };
+    window.addEventListener(CART_BUMP_EVENT, onBump);
+    return () => window.removeEventListener(CART_BUMP_EVENT, onBump);
+  }, []);
+
 
   const submitSearch = (event?: FormEvent, query = searchTerm) => {
     event?.preventDefault();
@@ -238,11 +252,22 @@ export function StorefrontLayout({
                 <UserRound size={19} />
               </Link>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}>
+            <motion.div
+              ref={cartIconRef}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              animate={
+                cartBump
+                  ? { scale: [1, 1.25, 0.92, 1.08, 1], rotateZ: [0, -6, 6, -3, 0] }
+                  : { scale: 1 }
+              }
+              transition={cartBump ? { duration: 0.4, ease: "easeOut" } : undefined}
+            >
               <Link
                 className="icon-button relative"
                 href="/cart"
                 aria-label="Cart"
+                data-cart-target
               >
                 <ShoppingBag size={20} />
                 <AnimatePresence>

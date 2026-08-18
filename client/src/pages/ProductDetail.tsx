@@ -10,7 +10,7 @@ import {
   ShoppingBag,
   Truck,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useRoute } from "wouter";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -22,6 +22,27 @@ import { SizeGuideModal } from "@/components/SizeGuideModal";
 import { addGuestCartItem } from "@/lib/cartStorage";
 import { trpc } from "@/lib/trpc";
 import { luxuryEase, microSpring } from "@/lib/motion";
+import { usePointerScene, useParallax, DEPTH } from "@/lib/use3d";
+import { flyToCart } from "@/lib/flyToCart";
+
+/* ---- Gallery image 3D transition variants ---- */
+const galleryImageVariants = {
+  initial: { opacity: 0, scale: 0.95, z: -40, rotateY: -2 },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    z: 0,
+    rotateY: 0,
+    transition: { duration: 0.4, ease: luxuryEase },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.96,
+    z: -30,
+    rotateY: 2,
+    transition: { duration: 0.25, ease: luxuryEase },
+  },
+};
 
 export default function ProductDetail({
   params: routeParams,
@@ -45,6 +66,9 @@ export default function ProductDetail({
   const [justAdded, setJustAdded] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
+  // Ref for fly-to-cart source element
+  const galleryMainRef = useRef<HTMLDivElement>(null);
+
   const product = productQuery.data;
 
   useEffect(() => {
@@ -59,11 +83,21 @@ export default function ProductDetail({
     [product?.variants, selectedVariantId]
   );
 
+  // Gallery pointer scene for subtle 3D perspective tilt
+  const gallery = usePointerScene<HTMLDivElement>({
+    spring: DEPTH.pointerSpring,
+  });
+  const galleryTiltX = useParallax(gallery.py, -DEPTH.galleryTilt);
+  const galleryTiltY = useParallax(gallery.px, DEPTH.galleryTilt);
+
   const addCart = trpc.cart.add.useMutation({
     onSuccess: () => {
       setJustAdded(true);
       toast.success("Added to your bag");
       utils.cart.get.invalidate();
+      // Fly the product image to the cart icon
+      const mainImage = images[imageIndex]?.url;
+      flyToCart(galleryMainRef.current, mainImage);
       setTimeout(() => setJustAdded(false), 2400);
     },
     onError: error => toast.error(error.message),
@@ -223,7 +257,7 @@ export default function ProductDetail({
             <div className="product-gallery__thumbs">
               {images.map((image, index) => (
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   aria-label={`View ${product.product.name} image ${index + 1}`}
                   className={`product-gallery__thumb relative ${imageIndex === index ? "product-gallery__thumb--active" : ""}`}
@@ -245,17 +279,34 @@ export default function ProductDetail({
                 </motion.button>
               ))}
             </div>
-            <div className="product-gallery__main overflow-hidden relative">
+            <div
+              className="product-gallery__main overflow-hidden relative"
+              ref={(node) => {
+                // Wire both refs: gallery scene ref for pointer tracking, galleryMainRef for flyToCart
+                (gallery.ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+                galleryMainRef.current = node;
+              }}
+              {...gallery.handlers}
+            >
               <AnimatePresence mode="wait">
                 {images[imageIndex] ? (
                   <motion.img
                     key={images[imageIndex].url}
                     src={images[imageIndex].url}
                     alt={images[imageIndex].altText ?? product.product.name}
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
-                    transition={{ duration: 0.35, ease: luxuryEase }}
+                    variants={galleryImageVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    style={
+                      gallery.enabled
+                        ? {
+                            rotateX: galleryTiltX,
+                            rotateY: galleryTiltY,
+                            transformPerspective: 900,
+                          }
+                        : undefined
+                    }
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -363,10 +414,10 @@ export default function ProductDetail({
                 </motion.button>
               </div>
 
-              {/* Multi-state Add to Bag Button */}
+              {/* Multi-state Add to Bag Button with physical press */}
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.97, y: 1 }}
                 transition={microSpring}
                 className={`button-primary inline-flex items-center justify-center gap-2 ${
                   justAdded ? "bg-[var(--moss)] text-white border-[var(--moss)]" : ""
@@ -402,6 +453,9 @@ export default function ProductDetail({
                     setJustAdded(true);
                     toast.success("Added to your bag!");
                     utils.cart.get.invalidate();
+                    // Fly to cart animation
+                    const mainImage = images[imageIndex]?.url;
+                    flyToCart(galleryMainRef.current, mainImage);
                     setTimeout(() => setJustAdded(false), 2400);
                   }
                 }}

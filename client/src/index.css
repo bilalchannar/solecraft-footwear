@@ -128,7 +128,12 @@ textarea:focus-visible {
 .button-primary:hover:not(:disabled) {
   background: var(--moss-dark);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 6px 20px rgba(47, 89, 72, 0.22);
+}
+.button-primary:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 2px 6px rgba(47, 89, 72, 0.12);
+  transition-duration: 80ms;
 }
 .button-primary:disabled,
 .button-secondary:disabled {
@@ -145,6 +150,11 @@ textarea:focus-visible {
   color: var(--paper);
   border-color: var(--ink);
   transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(24, 34, 31, 0.14);
+}
+.button-secondary:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+  transition-duration: 80ms;
 }
 .button-text {
   min-height: auto;
@@ -415,6 +425,8 @@ textarea:focus-visible {
   background: #d7cdbd;
   position: relative;
   border-radius: var(--radius-md);
+  perspective: 1200px;
+  transform-style: preserve-3d;
 }
 .hero__content-grid {
   display: grid;
@@ -455,10 +467,12 @@ textarea:focus-visible {
 .hero__visual-wrap {
   perspective: 1000px;
   min-height: 480px;
+  position: relative;
 }
 .hero__image-card {
   width: 100%;
   height: 100%;
+  transform-style: preserve-3d;
 }
 .hero__image {
   width: 100%;
@@ -493,6 +507,55 @@ textarea:focus-visible {
   transform: rotate(10deg);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
 }
+
+/* Hero floating 3D decorative elements */
+.hero__float-el {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  will-change: transform;
+  opacity: 0.45;
+}
+.hero__float-el--diamond {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--moss);
+  transform: rotate(45deg);
+  top: 18%;
+  left: 12%;
+  animation: hero-float-a 7s ease-in-out infinite;
+}
+.hero__float-el--ring {
+  width: 32px;
+  height: 32px;
+  border: 2.5px solid var(--clay);
+  border-radius: 50%;
+  bottom: 28%;
+  right: 8%;
+  animation: hero-float-b 9s ease-in-out infinite;
+}
+.hero__float-el--dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sun);
+  top: 55%;
+  left: 6%;
+  animation: hero-float-c 6s ease-in-out infinite;
+}
+@keyframes hero-float-a {
+  0%, 100% { transform: rotate(45deg) translateY(0) translateZ(0); }
+  50%      { transform: rotate(45deg) translateY(-10px) translateZ(8px); }
+}
+@keyframes hero-float-b {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-8px) rotate(12deg); }
+}
+@keyframes hero-float-c {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-6px) scale(1.15); }
+}
+
 .hero__controls-bar {
   position: absolute;
   bottom: 22px;
@@ -617,6 +680,8 @@ textarea:focus-visible {
   overflow: hidden;
   color: white;
   background: #4d6255;
+  perspective: 700px;
+  transform-style: preserve-3d;
 }
 .category-card::before {
   content: "";
@@ -631,22 +696,30 @@ textarea:focus-visible {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.35s ease;
+  transition: transform 0.5s var(--ease-out);
 }
 .category-card:hover img {
-  transform: scale(1.045);
+  transform: scale(1.06) translateZ(-6px);
 }
 .category-card span {
   position: relative;
   z-index: 2;
   font-family: "Fraunces", serif;
   font-size: 26px;
+  transition: transform 0.4s var(--ease-out);
+}
+.category-card:hover span {
+  transform: translateZ(14px) translateY(-2px);
 }
 .category-card small {
   position: relative;
   z-index: 2;
   margin: 0 0 5px auto;
   color: #e6ded0;
+  transition: transform 0.4s var(--ease-out);
+}
+.category-card:hover small {
+  transform: translateZ(10px) translateX(2px);
 }
 
 .product-grid {
@@ -657,6 +730,7 @@ textarea:focus-visible {
 .product-card {
   position: relative;
   min-width: 0;
+  perspective: 800px;
 }
 .product-card__image {
   aspect-ratio: 0.83;
@@ -959,6 +1033,7 @@ textarea:focus-visible {
   aspect-ratio: 0.82;
   background: #e9e1d6;
   overflow: hidden;
+  perspective: 900px;
 }
 .product-gallery__main img {
   width: 100%;
@@ -1722,18 +1797,18 @@ textarea:focus-visible {
 .product-card {
   border-radius: var(--radius-md);
   padding: 8px;
+  transform-style: preserve-3d;
   transition:
-    transform 200ms var(--ease-out),
     box-shadow 220ms var(--ease-out),
     background-color 220ms var(--ease-out);
 }
 .product-card:hover {
-  transform: translateY(-4px);
   background: var(--paper);
   box-shadow: var(--shadow-md);
 }
 .product-card__image {
   border-radius: calc(var(--radius-md) - 6px);
+  transform: translateZ(6px);
 }
 .product-card__image img {
   transition:
@@ -1744,7 +1819,7 @@ textarea:focus-visible {
   border-radius: 50%;
   box-shadow: var(--shadow-sm);
   opacity: 0;
-  transform: translateY(-6px) scale(0.92);
+  transform: translateY(-6px) scale(0.92) translateZ(14px);
   transition:
     opacity 180ms var(--ease-out),
     transform 180ms var(--ease-out),
@@ -1755,7 +1830,7 @@ textarea:focus-visible {
 .product-card__wish:focus-visible,
 .product-card__wish--saved {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateY(0) scale(1) translateZ(14px);
 }
 .product-card__wish--saved {
   color: var(--clay);
@@ -1763,6 +1838,7 @@ textarea:focus-visible {
 .product-card__badge {
   border-radius: 999px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  transform: translateZ(18px);
 }
 .product-card__badge--sale {
   background: var(--sun);
@@ -1772,12 +1848,10 @@ textarea:focus-visible {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   transition:
-    transform 220ms var(--ease-out),
     box-shadow 220ms var(--ease-out);
 }
 .category-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
 }
 .summary-card,
 .address-card,
@@ -2085,9 +2159,26 @@ textarea:focus-visible {
   }
   .product-card {
     padding: 5px;
+    perspective: none;
+    transform-style: flat;
   }
   .product-card__wish {
     opacity: 1;
+    transform: none;
+  }
+  .product-card__image,
+  .product-card__badge {
+    transform: none;
+  }
+  .hero__float-el {
+    display: none;
+  }
+  .category-card {
+    perspective: none;
+    transform-style: flat;
+  }
+  .category-card:hover span,
+  .category-card:hover small {
     transform: none;
   }
   .search-overlay {

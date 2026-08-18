@@ -6,7 +6,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { gentleSpring, microSpring } from "@/lib/motion";
+import { microSpring } from "@/lib/motion";
+import { useTilt3d, DEPTH } from "@/lib/use3d";
 
 export type StoreProduct = {
   id: number;
@@ -47,10 +48,23 @@ export function ProductCard({ product }: { product: StoreProduct }) {
     ? Number(product.basePrice) - Number(product.salePrice)
     : 0;
 
+  // 3D tilt on pointer hover — springs back to flat on leave
+  const tilt = useTilt3d<HTMLElement>({ max: DEPTH.cardTilt });
+
   return (
     <motion.article
-      whileHover={{ y: -6 }}
-      transition={gentleSpring}
+      ref={tilt.ref}
+      style={
+        tilt.enabled
+          ? {
+              rotateX: tilt.rotateX,
+              rotateY: tilt.rotateY,
+              transformPerspective: 800,
+            }
+          : undefined
+      }
+      {...tilt.handlers}
+      transition={microSpring}
       className={`product-card group ${saved ? "product-card--saved" : ""}`}
     >
       <Link
